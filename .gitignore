@@ -1,0 +1,10 @@
+# blacklist everyhting
+*
+# don't blacklist directories
+!*/
+
+# and these files
+!.gitignore
+!*.md
+!*.py
+!*.ipynb
