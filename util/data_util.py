@@ -14,7 +14,23 @@ from openslide import open_slide
 
 from skimage.filters import threshold_otsu
 
+
+
 dcm_ext = '.dcm'
+
+def get_volume_clinicalTrialTimePoint(folder_path):
+    '''
+        This function returns a dictionary (I guess) with the metadata of the dicom volume in the folder given in input
+        Args:
+            folder_path (str): path to the folder containing the volume in dicom files
+        Returns:
+            a dictionary 
+
+    '''
+    files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path,f))]
+    dcm_image = dicom.dcmread(os.path.join(folder_path,files[0]))
+    return dcm_image.ClinicalTrialTimePointID
+
 def load_single_volume(folder_path):
     '''
         This function returns a tuple with the volume of a single patient and its mean voxel dimension
@@ -29,13 +45,14 @@ def load_single_volume(folder_path):
     voxel_z = []
     voxel_x = []
     voxel_y = []
-    #print(folder_path)
+    
     for path, _, files in sorted(os.walk(folder_path)): 
       for filename in (sorted(files)): 
           if filename.endswith (dcm_ext):
             #print (filename)
             img_dcm_std = dicom.dcmread(os.path.join(folder_path,filename))
-            #print(img_dcm_std)
+            
+            #print(img_dcm_std.file_meta)
             img = img_dcm_std.pixel_array
             img_vol.append (img)
             
@@ -183,7 +200,7 @@ def calculate_coverage(slide, patches, level, level0_binary_mask, patch_size = (
     return coverage
 
 
-def find_best_level(slide, patch_size=(224, 224), threshold=0.9, max_patches=16):
+def find_best_level(slide, patch_size=(224, 224), threshold=0.9, max_patches=16, level = None):
     ''' This function finds the level of magnitude onto which to apply the patches in order to maximize
         the tissue area covered by the patches (this function is meant to tackle the problem of different
         scales of tissues in the wsi)
@@ -221,7 +238,17 @@ def find_best_level(slide, patch_size=(224, 224), threshold=0.9, max_patches=16)
         raise ValueError("Not enough patches with the required tissue content found at any level.")
 
     return best_level, best_patches
-
+def get_patches_at_level(slide, patch_size=(224, 224), threshold=0.9, max_patches=16, level = 1):
+    
+    thumbnail = get_thumbnail(slide, level)
+    binary_mask = apply_otsu_threshold(thumbnail)
+    patches = extract_patches(thumbnail, binary_mask, patch_size, threshold, max_patches)
+    if len(patches) < max_patches:
+        raise ValueError("Not enough patches with the required tissue content found at any level.")
+    
+    return patches
+    
+    
 
 def save_patches_as_numpy(patches, output_path, patient_id):
     ''' This function saves the given patches into a directory, in case the directory doesn't exist,
