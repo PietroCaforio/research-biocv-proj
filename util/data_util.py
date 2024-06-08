@@ -46,6 +46,7 @@ def load_single_volume(folder_path):
     voxel_x = []
     voxel_y = []
     
+    spacing = None
     for path, _, files in sorted(os.walk(folder_path)): 
       for filename in (sorted(files)): 
           if filename.endswith (dcm_ext):
@@ -55,8 +56,9 @@ def load_single_volume(folder_path):
             #print(img_dcm_std.file_meta)
             img = img_dcm_std.pixel_array
             img_vol.append (img)
-            
-            voxel_z.append (img_dcm_std.SpacingBetweenSlices)
+            if not hasattr(img_dcm_std, 'SpacingBetweenSlice'): spacing = 0
+            else: spacing = img_dcm_std.SpacingBetweenSlices
+            voxel_z.append (spacing)
             voxel_x.append (img_dcm_std.PixelSpacing [0])
             voxel_y.append (img_dcm_std.PixelSpacing [1])
       
