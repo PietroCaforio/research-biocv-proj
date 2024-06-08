@@ -92,7 +92,25 @@ def preprocess(volume : np.array, target_shape : list) -> np.array:
     return np.divide((volume - m), s)  
 
 #--------------------------------------WSI Preprocessing Functions-----------------------
-
+wsi_ext = '.svs'
+def get_patients_ids(dataset_path):
+    '''
+    This function returns the set of patients ids in the wsi dataset folder. 
+    This function assumes that it's a unique folder with svs files named like: C3L-00189-21.svs 
+    Args:
+        dataset_path (str)
+    Returns:
+        The set of unique patients ids in the dataset 
+    '''
+    patients_ids = []
+    for path, _, files in sorted(os.walk(dataset_path)): 
+        for filename in sorted(files):
+          if filename.endswith(wsi_ext):
+            patient_id = filename.split('.')[0]
+            patient_id = patient_id[:-3]
+            patients_ids.append(patient_id)
+    patients_ids = set(patients_ids)
+    return patients_ids
 
 def read_wsi(path):
     ''' This function uses the openslide library to open a wsi image from path and return it
@@ -239,7 +257,19 @@ def find_best_level(slide, patch_size=(224, 224), threshold=0.9, max_patches=16,
 
     return best_level, best_patches
 def get_patches_at_level(slide, patch_size=(224, 224), threshold=0.9, max_patches=16, level = 1):
-    
+    ''' This function returns "max_patches" patches of the wsi image taken in input at the fixed 'level' level of magnitude. 
+        
+        Args:
+            slide (OpenSlide objet)
+            patch_size (tuple)
+            threshold (float): minimum percentage of tissue we want in each patch 
+            max_patches (int): number of patches we want to obtain
+            level (int): level of magnitude of the OpenSlide wsi onto which we want to retrieve the patches 
+        Returns:
+            the patches found (np.array)
+        Raises:
+            ValueError if we don't get enough patches at the provided level
+    '''
     thumbnail = get_thumbnail(slide, level)
     binary_mask = apply_otsu_threshold(thumbnail)
     patches = extract_patches(thumbnail, binary_mask, patch_size, threshold, max_patches)
