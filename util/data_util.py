@@ -47,10 +47,22 @@ def load_single_volume(folder_path):
     voxel_y = []
     
     spacing = None
+    
+    #Handle long paths
+    folder_path = os.path.abspath(folder_path)
+
+    if folder_path.startswith(u"\\\\"):
+        folder_path=u"\\\\?\\UNC\\"+folder_path[2:]
+    else:
+        folder_path=u"\\\\?\\"+folder_path
+        
+        
     for path, _, files in sorted(os.walk(folder_path)): 
       for filename in (sorted(files)): 
           if filename.endswith (dcm_ext):
-            #print (filename)
+            #print(path)
+        
+            
             img_dcm_std = dicom.dcmread(os.path.join(folder_path,filename))
             
             #print(img_dcm_std.file_meta)
