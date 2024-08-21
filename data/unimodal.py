@@ -10,10 +10,10 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
     """Class for loading Unimodal CT dicom scans
     """
     num_classes = 3
-    dataset_path = "data/processed/CT"
+    dataset_path = "data/processed/"
     map_classes = {"G1":0,"G2":1,"G3":2}
     
-    def __init__(self, split:str):
+    def __init__(self, split:str,dataset_path:str = None):
         """
         Args:
             split (str): Choose between 'train', 'val', 'overfit' split
@@ -21,12 +21,14 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
         super().__init__()
         assert split in ['train', 'val', 'overfit']
         self.items = []
-        with open(f"data/processed/{split}.txt", "r") as split:
+        if dataset_path:
+            self.dataset_path = dataset_path
+        with open(f"{self.dataset_path}{split}.txt", "r") as split:
             for row in split:
                 row = row.strip()
-                self.items.extend([row+"_"+str(i) for i in range(len(np.load(self.dataset_path+"/"+row+".npy")))])     
+                self.items.extend([row+"_"+str(i) for i in range(len(np.load(self.dataset_path+"CT/"+row+".npy")))])     
         #self.items = Path(f"data/processed/{split}.txt").read_text().splitlines()
-        self.labels = {k.strip(): v.strip() for k, v in (line.split(',') for line in Path('data/processed/labels.txt').read_text().splitlines())}
+        self.labels = {k.strip(): v.strip() for k, v in (line.split(',') for line in Path(f'{self.dataset_path}labels.txt').read_text().splitlines())}
         
         
     def __getitem__(self, index):
@@ -42,7 +44,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
         patient_id = item.split("_")[0]
         item_class = self.map_classes[self.labels[patient_id]]
         
-        scan_frame = np.load(self.dataset_path+"/"+patient_id+".npy")[int(item.split("_")[1])]
+        scan_frame = np.load(self.dataset_path+"CT/"+patient_id+".npy")[int(item.split("_")[1])]
         return {
             "patient_id": patient_id,
             "frame": scan_frame,
