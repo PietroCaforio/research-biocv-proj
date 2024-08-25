@@ -45,6 +45,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
         item_class = self.map_classes[self.labels[patient_id]]
         
         scan_frame = np.load(self.dataset_path+"CT/"+patient_id+".npy")[int(item.split("_")[1])]
+        scan_frame = np.stack([scan_frame] * 3, axis=0)
         return {
             "patient_id": patient_id,
             "frame": scan_frame,
