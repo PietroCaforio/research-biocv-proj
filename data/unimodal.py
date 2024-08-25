@@ -69,7 +69,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
 
 def test_dataset():
     # Instantiate the dataset
-    dataset = UnimodalCTDataset(split='train')
+    dataset = UnimodalCTDataset(split='train', dataset_path =  "data/processed/")
 
     # Check the length of the dataset
     print(f"Dataset length: {len(dataset)}")
