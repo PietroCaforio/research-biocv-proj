@@ -33,55 +33,135 @@ def get_volume_clinicalTrialTimePoint(folder_path):
 
 def load_single_volume(folder_path):
     '''
-        This function returns a tuple with the volume of a single patient and its mean voxel dimension
+        This function returns a tuple with the volume of a single patient, its mean voxel dimension,
+        and a list of DICOM slices metadata (including z-coordinates).
         
         Args:
             folder_path (str): path to the folder containing the volume in dicom files
         Returns:
-            a tuple ( the volume as np.array, the mean voxel dimension of the volume)
-
+            a tuple ( the volume as np.array, the mean voxel dimension of the volume, list of DICOM slices metadata)
     '''
     img_vol = []
     voxel_z = []
     voxel_x = []
     voxel_y = []
     
+    dicom_slices = []  # List to store DICOM slices metadata
+    
     spacing = None
     
-    #Handle long paths
+    # Handle long paths
     folder_path = os.path.abspath(folder_path)
 
     if folder_path.startswith(u"\\\\"):
-        folder_path=u"\\\\?\\UNC\\"+folder_path[2:]
+        folder_path = u"\\\\?\\UNC\\" + folder_path[2:]
     else:
-        folder_path=u"\\\\?\\"+folder_path
+        folder_path = u"\\\\?\\" + folder_path
         
+    dcm_ext = ".dcm"  # Assuming DICOM files have the extension '.dcm'
         
     for path, _, files in sorted(os.walk(folder_path)): 
-      for filename in (sorted(files)): 
-          if filename.endswith (dcm_ext):
-            #print(path)
-        
-            
-            img_dcm_std = dicom.dcmread(os.path.join(folder_path,filename))
-            
-            #print(img_dcm_std.file_meta)
-            img = img_dcm_std.pixel_array
-            img_vol.append (img)
-            if not hasattr(img_dcm_std, 'SpacingBetweenSlice'): spacing = 0
-            else: spacing = img_dcm_std.SpacingBetweenSlices
-            voxel_z.append (spacing)
-            voxel_x.append (img_dcm_std.PixelSpacing [0])
-            voxel_y.append (img_dcm_std.PixelSpacing [1])
+        for filename in sorted(files): 
+            if filename.endswith(dcm_ext):
+                img_dcm_std = dicom.dcmread(os.path.join(folder_path, filename))
+                img = img_dcm_std.pixel_array
+                img_vol.append(img)
+                
+                if not hasattr(img_dcm_std, 'SpacingBetweenSlices'): 
+                    spacing = 0
+                else:
+                    spacing = img_dcm_std.SpacingBetweenSlices
+                    
+                voxel_z.append(spacing)
+                voxel_x.append(img_dcm_std.PixelSpacing[0])
+                voxel_y.append(img_dcm_std.PixelSpacing[1])
+                
+                # Append the DICOM slice to the list (to access metadata like ImagePositionPatient)
+                dicom_slices.append(img_dcm_std)
       
-      voxel_z = np.array(voxel_z)
-      voxel_x = np.array(voxel_x)
-      voxel_y = np.array(voxel_y)      
-      z_space = voxel_z.mean()
-      x_space = voxel_x.mean()
-      y_space = voxel_y.mean()
-      vox_dim = (x_space, y_space, z_space)
-    return (np.array(img_vol),vox_dim)
+    voxel_z = np.array(voxel_z)
+    voxel_x = np.array(voxel_x)
+    voxel_y = np.array(voxel_y)      
+    z_space = voxel_z.mean()
+    x_space = voxel_x.mean()
+    y_space = voxel_y.mean()
+    vox_dim = (x_space, y_space, z_space)
+    
+    return np.array(img_vol), vox_dim, dicom_slices
+
+def get_occupied_slices(rtstruct_path, dicom_slices):
+    # Load the RTSTRUCT file
+    rtstruct = dicom.read_file(rtstruct_path)
+    
+    # Extract the Contour Sequences
+    contour_sequences = rtstruct.ROIContourSequence
+    
+    # Get the z-coordinates of the DICOM slices
+    slice_z_positions = [float(slice.ImagePositionPatient[2]) for slice in dicom_slices]
+    
+    # Initialize a set to store occupied slice indices
+    occupied_slices = set()
+    
+    # Loop through each contour sequence
+    for contour_seq in contour_sequences:
+        for contour in contour_seq.ContourSequence:
+            # Extract contour data (x, y, z coordinates)
+            contour_data = contour.ContourData
+            
+            # Extract z-values from contour data
+            contour_z_values = contour_data[2::3]  # Every third value is a z-coordinate
+            
+            # Match contour z-values with slice z-positions
+            for z in contour_z_values:
+                # Find the slice index that matches the z-coordinate
+                if z in slice_z_positions:
+                    slice_index = slice_z_positions.index(z)
+                    occupied_slices.add(slice_index)
+    
+    return sorted(list(occupied_slices))
+
+def remap_occupied_slices(occupied_slices, zoom_factor_z):
+    '''
+    Remap the indices of occupied slices from the original volume to the normalized volume.
+    
+    Args:
+        occupied_slices (list): List of occupied slice indices in the original volume.
+        zoom_factor_z (float): The zoom factor applied to the z-axis (slice dimension).
+    
+    Returns:
+        list: Remapped slice indices in the normalized volume.
+    '''
+    '''
+    Remap and fill the indices of occupied slices from the original volume to the normalized volume.
+    
+    Args:
+        occupied_slices (list): List of occupied slice indices in the original volume.
+        zoom_factor_z (float): The zoom factor applied to the z-axis (slice dimension).
+    
+    Returns:
+        list: Remapped and filled slice indices in the normalized volume.
+    '''
+    remapped_slices = []
+
+    # Step 1: Remap each slice index using the zoom factor
+    for i in range(len(occupied_slices)):
+        # Remap current slice
+        current_mapped = int(round(occupied_slices[i] * zoom_factor_z))
+        
+        if i > 0:
+            # Remap previous slice
+            previous_mapped = int(round(occupied_slices[i - 1] * zoom_factor_z))
+            
+            # If the current and previous slices are subsequent in the original,
+            # Fill in the indices between them
+            if occupied_slices[i] == occupied_slices[i - 1] + 1:
+                remapped_slices.extend(range(previous_mapped, current_mapped + 1))
+            else:
+                remapped_slices.append(current_mapped)
+        else:
+            remapped_slices.append(current_mapped)
+    
+    return sorted(set(remapped_slices))  # Remove duplicates and sort
 
 def preprocess(volume : np.array, target_shape : list) -> np.array:
     ''' This function normalizes the volume and returns it in the given target shape
@@ -103,7 +183,7 @@ def preprocess(volume : np.array, target_shape : list) -> np.array:
     #max min normalization
     m = np.mean(volume)
     s = np.std(volume)
-    return np.divide((volume - m), s)  
+    return np.divide((volume - m), s), factor  
 
 #--------------------------------------WSI Preprocessing Functions-----------------------
 wsi_ext = '.svs'
