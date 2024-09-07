@@ -1,11 +1,13 @@
 # TODO: Implement 2 classes one for CT Modality and one for the WSI modality
 
 from pathlib import Path
-
+import os
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
+
+from random import randint
 class UnimodalCTDataset(torch.utils.data.Dataset):
     """Class for loading Unimodal CT dicom scans
     """
@@ -23,10 +25,13 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
         self.items = []
         if dataset_path:
             self.dataset_path = dataset_path
+        #per ogni riga apro la cartella del paziente e faccio "il loading" dei volumi del paziente (?)
         with open(f"{self.dataset_path}{split}.txt", "r") as split:
             for row in split:
                 row = row.strip()
-                self.items.extend([row+"_"+str(i) for i in range(len(np.load(self.dataset_path+"CT/"+row+".npy")))])     
+                for file in os.listdir(self.dataset_path+'CT/'+row):
+                    #print(file)
+                    self.items.extend([row+"/"+file+"_"+str(i) for i in range(len(np.load(self.dataset_path+"CT/"+row+"/"+file)))])     
         #self.items = Path(f"data/processed/{split}.txt").read_text().splitlines()
         self.labels = {k.strip(): v.strip() for k, v in (line.split(',') for line in Path(f'{self.dataset_path}labels.txt').read_text().splitlines())}
         
@@ -41,10 +46,10 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
         """
         
         item = self.items[index] 
-        patient_id = item.split("_")[0]
+        patient_id = item.split("_")[0].split("/")[0]
         item_class = self.map_classes[self.labels[patient_id]]
         
-        scan_frame = np.load(self.dataset_path+"CT/"+patient_id+".npy")[int(item.split("_")[1])]
+        scan_frame = np.load(self.dataset_path+"CT/"+item.split("_")[0])[int(item.split("_")[1])]
         scan_frame = np.stack([scan_frame] * 3, axis=0)
         return {
             "patient_id": patient_id,
@@ -77,7 +82,9 @@ def test_dataset():
 
     # Check the first few items in the dataset
     for i in range(3):
-        item = dataset[i]
+        min = 0
+        max = len(dataset)
+        item = dataset[(randint(min,max))]
         print(f"Item {i}:")
         print(f"  Patient ID: {item['patient_id']}")
         print(f"  Frame shape: {item['frame'].shape}")
