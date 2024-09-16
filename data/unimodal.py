@@ -14,7 +14,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
     num_classes = 3
     dataset_path = "data/processed/"
     map_classes = {"G1":0,"G2":1,"G3":2}
-    
+    classfreq = {"G1":0, "G2":0, "G3":0}
     def __init__(self, split:str,dataset_path:str = None):
         """
         Args:
@@ -26,14 +26,17 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
         if dataset_path:
             self.dataset_path = dataset_path
         #per ogni riga apro la cartella del paziente e faccio "il loading" dei volumi del paziente (?)
+        self.labels = {k.strip(): v.strip() for k, v in (line.split(',') for line in Path(f'{self.dataset_path}labels.txt').read_text().splitlines())}
+         
         with open(f"{self.dataset_path}{split}.txt", "r") as split:
             for row in split:
                 row = row.strip()
                 for file in os.listdir(self.dataset_path+'CT/'+row):
                     #print(file)
-                    self.items.extend([row+"/"+file+"_"+str(i) for i in range(len(np.load(self.dataset_path+"CT/"+row+"/"+file)))])     
+                    npy_ct = np.load(self.dataset_path+"CT/"+row+"/"+file)
+                    self.classfreq[self.labels[row]] += len(npy_ct)
+                    self.items.extend([row+"/"+file+"_"+str(i) for i in range(len(npy_ct))])     
         #self.items = Path(f"data/processed/{split}.txt").read_text().splitlines()
-        self.labels = {k.strip(): v.strip() for k, v in (line.split(',') for line in Path(f'{self.dataset_path}labels.txt').read_text().splitlines())}
         
         
     def __getitem__(self, index):
@@ -61,6 +64,11 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
         :return: length of the dataset
         """
         return len(self.items)
+    def stats(self):
+        return {
+            "length": len(self.items),
+            "class_frequency": self.classfreq
+        }
     
     @staticmethod
     def move_batch_to_device(batch, device):
@@ -77,8 +85,8 @@ def test_dataset():
     # Instantiate the dataset
     dataset = UnimodalCTDataset(split='train', dataset_path =  "data/processed/")
 
-    # Check the length of the dataset
-    print(f"Dataset length: {len(dataset)}")
+    # Check stats of dataset
+    print(f"Dataset stats: {dataset.stats()}")
 
     # Check the first few items in the dataset
     for i in range(3):
