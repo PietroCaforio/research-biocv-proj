@@ -14,7 +14,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
     num_classes = 3
     dataset_path = "data/processed/"
     map_classes = {"G1":0,"G2":1,"G3":2}
-    classfreq = {"G1":0, "G2":0, "G3":0}
+    
     def __init__(self, split:str,dataset_path:str = None):
         """
         Args:
@@ -23,6 +23,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
         super().__init__()
         assert split in ['train', 'val', 'overfit']
         self.items = []
+        self.classfreq = {"G1":0, "G2":0, "G3":0}
         if dataset_path:
             self.dataset_path = dataset_path
         #per ogni riga apro la cartella del paziente e faccio "il loading" dei volumi del paziente (?)
@@ -83,7 +84,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
 
 def test_dataset():
     # Instantiate the dataset
-    dataset = UnimodalCTDataset(split='train', dataset_path =  "data/processed/")
+    dataset = UnimodalCTDataset(split='val', dataset_path =  "data/processed/")
 
     # Check stats of dataset
     print(f"Dataset stats: {dataset.stats()}")
