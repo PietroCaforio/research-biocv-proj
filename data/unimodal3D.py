@@ -92,7 +92,7 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
         
         item = self.items[index] 
         patient_id = item.split("/")[0]
-        print(f"item: {item}")
+        #print(f"item: {item}")
         item_class = self.map_classes[self.labels[patient_id]]
         
         vol = np.load(self.dataset_path+"CT/"+item)
