@@ -3,7 +3,9 @@ import numpy as np
 import pandas as pd
 import concurrent.futures
 
-from util.data_util import *
+import sys
+sys.path.insert(0, '../util')
+from data_util import *
 import pandas as pd
 from datetime import datetime
 
@@ -17,14 +19,14 @@ from multiprocessing import Pool
 
 def thread(row):
     target_depths = {"G1":140, "G2":16, "G3":46}
-    root_path = os.path.normpath('./data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/CPTAC-PDA')
-    segmentation_root = os.path.normpath('./data/raw/Segmentations/')
+    root_path = os.path.normpath('../data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/CPTAC-PDA')
+    segmentation_root = os.path.normpath('../data/raw/Segmentations/')
     DIRNAMES = 1
     subfolders = [f.path for f in os.scandir(root_path) if f.is_dir()] #Get patients folders
-    annotations = pd.read_csv('./data/clinical_annotations.tsv',  sep='\t')
-    segmentations = pd.read_csv('./data/Metadata_Report_CPTAC-PDA_2023_07_14.csv')
-    segmentations_metadata = pd.read_csv('./data/raw/Segmentations/metadata.csv')
-    metadata = pd.read_csv('./data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/metadata.csv')
+    annotations = pd.read_csv('../data/clinical_annotations.tsv',  sep='\t')
+    segmentations = pd.read_csv('../data/Metadata_Report_CPTAC-PDA_2023_07_14.csv')
+    segmentations_metadata = pd.read_csv('../data/raw/Segmentations/metadata.csv')
+    metadata = pd.read_csv('../data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/metadata.csv')
     target_shape = [224,224,224]
     # Since the volumes are put in subfolders of patient's folders (and I'm still not sure about which of the 
     # volume subfolders I should choose) I choose the first subfolder of the patient as the volume to be 
@@ -73,7 +75,7 @@ def thread(row):
         
         
     
-    output_path = "./data/processed_oversampling/CT/"
+    output_path = "../data/processed_oversampling/CT/"
     
     if not os.path.exists(output_path):
         os.makedirs(output_path)
@@ -91,14 +93,14 @@ def thread(row):
 if __name__=="__main__":
     #ntpath.realpath = ntpath.abspath
     target_depths = {"G1":140, "G2":16, "G3":46}
-    root_path = os.path.normpath('./data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/CPTAC-PDA')
-    segmentation_root = os.path.normpath('./data/raw/Segmentations/')
+    root_path = os.path.normpath('../data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/CPTAC-PDA')
+    segmentation_root = os.path.normpath('../data/raw/Segmentations/')
     DIRNAMES = 1
     subfolders = [f.path for f in os.scandir(root_path) if f.is_dir()] #Get patients folders
-    annotations = pd.read_csv('./data/clinical_annotations.tsv',  sep='\t')
-    segmentations = pd.read_csv('./data/Metadata_Report_CPTAC-PDA_2023_07_14.csv')
-    segmentations_metadata = pd.read_csv('./data/raw/Segmentations/metadata.csv')
-    metadata = pd.read_csv('./data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/metadata.csv')
+    annotations = pd.read_csv('../data/clinical_annotations.tsv',  sep='\t')
+    segmentations = pd.read_csv('../data/Metadata_Report_CPTAC-PDA_2023_07_14.csv')
+    segmentations_metadata = pd.read_csv('../data/raw/Segmentations/metadata.csv')
+    metadata = pd.read_csv('../data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/metadata.csv')
     target_shape = [224,224,224]
     # Since the volumes are put in subfolders of patient's folders (and I'm still not sure about which of the 
     # volume subfolders I should choose) I choose the first subfolder of the patient as the volume to be 
@@ -112,7 +114,7 @@ if __name__=="__main__":
         results = p.map(thread, rows)
     
     # Write the results to the labels file after processing is done
-    with open("data/processed/labels.txt", "w") as labels_f:
+    with open("../data/processed/labels.txt", "w") as labels_f:
         for result in results:
             if result is not None:
                 patient_id, cancer_grade = result
