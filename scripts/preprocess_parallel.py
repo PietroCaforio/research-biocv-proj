@@ -4,8 +4,8 @@ import pandas as pd
 import concurrent.futures
 
 import sys
-sys.path.insert(0, '../util')
-from data_util import *
+sys.path.insert(0, '../')
+from util.data_util import *
 import pandas as pd
 from datetime import datetime
 
@@ -86,7 +86,7 @@ def thread(row):
     os.makedirs(output_path+patient_id+'/', exist_ok = True)
     np.save(output_path+patient_id+'/%s.npy'% i, vol[occupied_slices])
     return patient_id, cancer_grade
-    labels_f.write(patient_id+","+cancer_grade+"\n")
+    #labels_f.write(patient_id+","+cancer_grade+"\n")
 
 
         
@@ -110,7 +110,7 @@ if __name__=="__main__":
     
     #print(segmentations.head())         
     rows = [row for index, row in segmentations.iterrows()]
-    with Pool(4) as p:
+    with Pool(5) as p:
         results = p.map(thread, rows)
     
     # Write the results to the labels file after processing is done
