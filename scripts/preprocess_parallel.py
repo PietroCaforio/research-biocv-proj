@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import concurrent.futures
-
+from pathlib import Path
 import sys
 sys.path.insert(0, '../')
 from util.data_util import *
@@ -28,6 +28,7 @@ def thread(row):
     segmentations_metadata = pd.read_csv('../data/raw/Segmentations/metadata.csv')
     metadata = pd.read_csv('../data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/metadata.csv')
     target_shape = [224,224,224]
+    validation_patients = Path("../data/processed_oversampling/val.txt").read_text().splitlines()
     # Since the volumes are put in subfolders of patient's folders (and I'm still not sure about which of the 
     # volume subfolders I should choose) I choose the first subfolder of the patient as the volume to be 
     # preprocessed.
@@ -62,17 +63,18 @@ def thread(row):
     if not occupied_slices: 
         print(f"Skipped patient: {patient_id}")
         return None
-    
-    left_index = min(occupied_slices) - 1
-    right_index = max(occupied_slices) + 1
-    while len(occupied_slices) < target_depths[cancer_grade.strip()] and target_depths[cancer_grade.strip()] != "G2":
-        if left_index >= 0:
-            occupied_slices.insert(0, left_index)  # Add frame to the left (start of the list)
-            left_index -= 1
-        if len(occupied_slices) < target_depths[cancer_grade.strip()] and right_index < len(vol):
-            occupied_slices.append(right_index)  # Add frame to the right (end of the list)
-            right_index += 1
-        
+    if patient_id not in validation_patients:
+        left_index = min(occupied_slices) - 1
+        right_index = max(occupied_slices) + 1
+        while len(occupied_slices) < target_depths[cancer_grade.strip()] and target_depths[cancer_grade.strip()] != "G2":
+            if left_index >= 0:
+                occupied_slices.insert(0, left_index)  # Add frame to the left (start of the list)
+                left_index -= 1
+            if len(occupied_slices) < target_depths[cancer_grade.strip()] and right_index < len(vol):
+                occupied_slices.append(right_index)  # Add frame to the right (end of the list)
+                right_index += 1
+    else: print(f"validation patient {patient_id} not padded")
+            
         
     
     output_path = "../data/processed_oversampling/CT/"
