@@ -13,7 +13,7 @@ import openslide
 from openslide import open_slide
 
 from skimage.filters import threshold_otsu
-
+import math
 
 
 dcm_ext = '.dcm'
@@ -98,10 +98,12 @@ def get_occupied_slices(rtstruct_path, dicom_slices):
     
     # Get the z-coordinates of the DICOM slices
     slice_z_positions = [float(slice.ImagePositionPatient[2]) for slice in dicom_slices]
-    
+    #if rtstruct.PatientID.strip() == "C3L-02118":
+    #            print("Slice z positions: \n",slice_z_positions)
     # Initialize a set to store occupied slice indices
     occupied_slices = set()
-    
+    #if rtstruct.PatientID.strip() == "C3L-02118":
+    #    print()
     # Loop through each contour sequence
     for contour_seq in contour_sequences:
         for contour in contour_seq.ContourSequence:
@@ -110,13 +112,17 @@ def get_occupied_slices(rtstruct_path, dicom_slices):
             
             # Extract z-values from contour data
             contour_z_values = contour_data[2::3]  # Every third value is a z-coordinate
-            
+            #if rtstruct.PatientID.strip() == "C3L-02118":
+            #    print("contour values of C3L-02118: \n",contour_z_values) 
+                
             # Match contour z-values with slice z-positions
             for z in contour_z_values:
-                # Find the slice index that matches the z-coordinate
-                if z in slice_z_positions:
-                    slice_index = slice_z_positions.index(z)
-                    occupied_slices.add(slice_index)
+            # Iterate over the slice_z_positions to check for close values
+                for i, slice_z in enumerate(slice_z_positions):
+                    # Check if z is close to slice_z within the threshold
+                    if math.isclose(z, slice_z, abs_tol=0.9):
+                        slice_index = i  # Get the index of the matching z position
+                        occupied_slices.add(slice_index)  # Add the index to the occupied_slices set
     
     return sorted(list(occupied_slices))
 
