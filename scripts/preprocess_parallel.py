@@ -29,7 +29,7 @@ def thread(params):
     annotations = pd.read_csv('../data/clinical_annotations.tsv',  sep='\t')
     validation_patients = Path("../data/processed_oversampling/val.txt").read_text().splitlines()
     referenced_series_instance_uid = row["ReferencedSeriesInstanceUID"]
-        
+    
     volume_folder = metadata[metadata["Series UID"]==referenced_series_instance_uid]["File Location"]
     if volume_folder.empty:
         return None
@@ -58,21 +58,23 @@ def thread(params):
     if not occupied_slices: 
         print(f"Skipped patient: {patient_id}")
         return None
-    if patient_id not in validation_patients:
-        left_index = min(occupied_slices) - 1
-        right_index = max(occupied_slices) + 1
-        while len(occupied_slices) < target_depths[cancer_grade.strip()] and target_depths[cancer_grade.strip()] != "G2":
-            if left_index >= 0:
-                occupied_slices.insert(0, left_index)  # Add frame to the left (start of the list)
-                left_index -= 1
-            if len(occupied_slices) < target_depths[cancer_grade.strip()] and right_index < len(vol):
-                occupied_slices.append(right_index)  # Add frame to the right (end of the list)
-                right_index += 1
-    else: print(f"validation patient {patient_id} not padded")
-            
+    if args.oversampling:
+        if patient_id not in validation_patients and cancer_grade != "G2":
+            left_index = min(occupied_slices) - 1
+            right_index = max(occupied_slices) + 1
+            while len(occupied_slices) < target_depths[cancer_grade.strip()] and target_depths[cancer_grade.strip()] != "G2":
+                if left_index >= 0:
+                    occupied_slices.insert(0, left_index)  # Add frame to the left (start of the list)
+                    left_index -= 1
+                if len(occupied_slices) < target_depths[cancer_grade.strip()] and right_index < len(vol):
+                    occupied_slices.append(right_index)  # Add frame to the right (end of the list)
+                    right_index += 1
+        elif cancer_grade == "G2": print(f"G2 patient {patient_id} not padded") 
+        else: print(f"validation patient or G2 patient {patient_id} not padded")
+                
         
     
-    output_path = "../data/processed_oversampling/CT/"
+    output_path = args.destination
     
     if not os.path.exists(output_path):
         os.makedirs(output_path)
@@ -91,6 +93,9 @@ if __name__=="__main__":
     start = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip_folders", type = bool, default=False) 
+    parser.add_argument("--oversampling", type = bool, default=False)
+    parser.add_argument("--destination", type=str, default="../data/processed_oversampling/CT/")
+    parser.add_argument("--np", type=int, default=4)
     args = parser.parse_args()
     
     segmentations = pd.read_csv('../data/Metadata_Report_CPTAC-PDA_2023_07_14.csv')
@@ -100,7 +105,7 @@ if __name__=="__main__":
     
     #print(segmentations.head())         
     rows = [{"row":row, "args":args} for index, row in segmentations.iterrows()]
-    with Pool(4) as p:
+    with Pool(args.np) as p:
         results = p.map(thread, rows)
     
     # Write the results to the labels file after processing is done
