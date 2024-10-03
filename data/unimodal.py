@@ -27,14 +27,14 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
         if dataset_path:
             self.dataset_path = dataset_path
         #per ogni riga apro la cartella del paziente e faccio "il loading" dei volumi del paziente (?)
-        self.labels = {k.strip(): v.strip() for k, v in (line.split(',') for line in Path(f'{self.dataset_path}labels.txt').read_text().splitlines())}
+        self.labels = {k.strip(): v.strip() for k, v in (line.split(',') for line in Path(f'{os.path.join(self.dataset_path,"labels.txt")}').read_text().splitlines())}
          
-        with open(f"{self.dataset_path}{split}.txt", "r") as split:
+        with open(f"{os.path.join(self.dataset_path,split)}.txt", "r") as split:
             for row in split:
                 row = row.strip()
-                for file in os.listdir(self.dataset_path+'CT/'+row):
+                for file in os.listdir(os.path.join(self.dataset_path,'CT/'+row)):
                     #print(file)
-                    npy_ct = np.load(self.dataset_path+"CT/"+row+"/"+file)
+                    npy_ct = np.load(os.path.join(self.dataset_path,'CT/'+row+"/"+file))
                     self.classfreq[self.labels[row]] += len(npy_ct)
                     self.items.extend([row+"/"+file+"_"+str(i) for i in range(len(npy_ct))])     
         #self.items = Path(f"data/processed/{split}.txt").read_text().splitlines()
@@ -53,7 +53,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
         patient_id = item.split("_")[0].split("/")[0]
         item_class = self.map_classes[self.labels[patient_id]]
         
-        scan_frame = np.load(self.dataset_path+"CT/"+item.split("_")[0])[int(item.split("_")[1])]
+        scan_frame = np.load(os.path.join(self.dataset_path,"CT/"+item.split("_")[0]))[int(item.split("_")[1])]
         scan_frame = np.stack([scan_frame] * 3, axis=0)
         return {
             "patient_id": patient_id,
@@ -84,7 +84,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
 
 def test_dataset():
     # Instantiate the dataset
-    dataset = UnimodalCTDataset(split='val', dataset_path =  "data/processed/")
+    dataset = UnimodalCTDataset(split='val', dataset_path =  "data/processed")
 
     # Check stats of dataset
     print(f"Dataset stats: {dataset.stats()}")

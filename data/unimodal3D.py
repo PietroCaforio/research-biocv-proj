@@ -66,14 +66,14 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
         if dataset_path:
             self.dataset_path = dataset_path
         #per ogni riga apro la cartella del paziente e faccio "il loading" dei volumi del paziente (?)
-        self.labels = {k.strip(): v.strip() for k, v in (line.split(',') for line in Path(f'{self.dataset_path}labels.txt').read_text().splitlines())}
+        self.labels = {k.strip(): v.strip() for k, v in (line.split(',') for line in Path(f'{os.path.join(self.dataset_path,"labels.txt")}').read_text().splitlines())}
         self.max_depth = 0 
-        with open(f"{self.dataset_path}{split}.txt", "r") as split:
+        with open(f"{os.path.join(self.dataset_path,split)}.txt", "r") as split:
             for row in split:
                 row = row.strip()        
-                for file in os.listdir(self.dataset_path+'CT/'+row):
+                for file in os.listdir(os.path.join(self.dataset_path,'CT/'+row)):
                     #print(file)
-                    depth = len(np.load(self.dataset_path+"CT/"+row+"/"+file))
+                    depth = len(np.load(os.path.join(self.dataset_path,'CT/'+row+"/"+file)))
                     
                     if depth > self.max_depth:
                         self.max_depth = depth
@@ -95,7 +95,7 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
         #print(f"item: {item}")
         item_class = self.map_classes[self.labels[patient_id]]
         
-        vol = np.load(self.dataset_path+"CT/"+item)
+        vol = np.load(os.path.join(self.dataset_path,"CT/"+item))
         vol = VolumeStandardizer().standardize(volume=vol,target_depth=self.max_depth, method = self.vol_std_method) 
         return {
             "patient_id": patient_id,
