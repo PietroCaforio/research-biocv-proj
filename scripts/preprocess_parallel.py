@@ -33,6 +33,9 @@ def thread(params):
     volume_folder = metadata[metadata["Series UID"]==referenced_series_instance_uid]["File Location"]
     if volume_folder.empty:
         return None
+    patient_id = row["PatientID"].strip()
+    if args.skip_folders and patient_id in os.listdir("../data/processed_oversampling/CT"):
+        return None
     volume_folder = volume_folder.iloc[0]
     volume_folder = os.path.join(root_path,os.path.join(*(volume_folder.split(os.path.sep)[2:])))
     #print(volume_folder)
@@ -45,10 +48,9 @@ def thread(params):
     seg_file = os.listdir(os.path.join(segmentation_root,segmentation_folder))[0]
     #print(os.path.join(segmentation_root,segmentation_folder,seg_file))
     occupied_slices = get_occupied_slices(os.path.join(segmentation_root,segmentation_folder,seg_file), dicom_slices)
-    patient_id = row["PatientID"].strip()
     
-    if args.skip_folders and patient_id in os.listdir("../data/processed_oversampling/CT"):
-        return None
+    
+    
     vol, zoom_factors = preprocess(vol,target_shape)
     occupied_slices = remap_occupied_slices(occupied_slices, zoom_factors[0])
     
@@ -94,7 +96,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip_folders", type = bool, default=False) 
     parser.add_argument("--oversampling", type = bool, default=False)
-    parser.add_argument("--destination", type=str, default="../data/processed_oversampling/CT/")
+    parser.add_argument("--destination", type=str, default="../data/processed/CT/")
     parser.add_argument("--np", type=int, default=4)
     args = parser.parse_args()
     
