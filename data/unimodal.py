@@ -21,7 +21,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
             split (str): Choose between 'train', 'val', 'overfit' split
         """
         super().__init__()
-        assert split in ['train', 'val', 'overfit']
+        assert split in ['train', 'val', 'overfit', 'all']
         self.items = []
         self.classfreq = {"G1":0, "G2":0, "G3":0}
         if dataset_path:
@@ -84,7 +84,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
 
 def test_dataset():
     # Instantiate the dataset
-    dataset = UnimodalCTDataset(split='val', dataset_path =  "data/processed")
+    dataset = UnimodalCTDataset(split='all', dataset_path =  "data/processed")
 
     # Check stats of dataset
     print(f"Dataset stats: {dataset.stats()}")
