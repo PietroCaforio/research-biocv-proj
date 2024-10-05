@@ -116,4 +116,4 @@ def sanity_check_dataset():
     print(f"Batch moved to device: {device}")
 
 if __name__ == "__main__":
-    test_dataset()
+    sanity_check_dataset
