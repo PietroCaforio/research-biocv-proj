@@ -82,7 +82,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
 
 
 
-def test_dataset():
+def sanity_check_dataset():
     # Instantiate the dataset
     dataset = UnimodalCTDataset(split='all', dataset_path =  "data/processed")
 

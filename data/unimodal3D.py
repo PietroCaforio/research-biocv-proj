@@ -58,7 +58,7 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
             split (str): Choose between 'train', 'val', 'overfit' split
         """
         super().__init__()
-        assert split in ['train', 'val', 'overfit']
+        assert split in ['train', 'val', 'overfit', 'all']
         self.items = []
         self.classfreq = {"G1":0, "G2":0, "G3":0}
         self.vol_std_method = vol_std_method
@@ -122,7 +122,7 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
         batch['label'] = batch['label'].to(device)
 
 
-def test_dataset():
+def sanity_check_dataset():
     # Instantiate the dataset
     dataset = UnimodalCTDataset3D(split='val', dataset_path =  "data/processed/")
     print(f"MAX DEPTH: {dataset.max_depth}")
