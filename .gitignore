@@ -9,4 +9,4 @@
 !*.py
 !*.ipynb
 !*.txt
-!*.github
+!*.github/workflows/ci.yaml
