@@ -4,8 +4,8 @@ from pathlib import Path
 import os
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
-
+from torch.utils.data import DataLoader, WeightedRandomSampler
+from torchvision import transforms
 
 from random import randint
 class UnimodalCTDataset(torch.utils.data.Dataset):
@@ -15,7 +15,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
     dataset_path = "data/processed/"
     map_classes = {"G1":0,"G2":1,"G3":2}
     
-    def __init__(self, split:str,dataset_path:str = None):
+    def __init__(self, split:str,dataset_path:str = None, transform = None):
         """
         Args:
             split (str): Choose between 'train', 'val', 'overfit' split
@@ -28,7 +28,7 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
             self.dataset_path = dataset_path
         #per ogni riga apro la cartella del paziente e faccio "il loading" dei volumi del paziente (?)
         self.labels = {k.strip(): v.strip() for k, v in (line.split(',') for line in Path(f'{os.path.join(self.dataset_path,"labels.txt")}').read_text().splitlines())}
-         
+        self.transform = transform
         with open(f"{os.path.join(self.dataset_path,split)}.txt", "r") as split:
             for row in split:
                 row = row.strip()
@@ -38,7 +38,19 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
                     self.classfreq[self.labels[row]] += len(npy_ct)
                     self.items.extend([row+"/"+file+"_"+str(i) for i in range(len(npy_ct))])     
         #self.items = Path(f"data/processed/{split}.txt").read_text().splitlines()
+        self.weights = self.calculate_weights()
         
+    def calculate_weights(self):
+        """Calculates weights for each sample in the dataset based on class frequencies."""
+        weights = []
+        total_samples = sum(self.classfreq.values())
+        for item in self.items:
+            patient_id = item.split("_")[0].split("/")[0]
+            label = self.map_classes[self.labels[patient_id]]
+            # Calculate weight for the sample
+            weight = total_samples / (self.classfreq[self.labels[patient_id]] * self.num_classes)
+            weights.append(weight)
+        return weights
         
     def __getitem__(self, index):
         """
@@ -55,6 +67,11 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
         
         scan_frame = np.load(os.path.join(self.dataset_path,"CT/"+item.split("_")[0]))[int(item.split("_")[1])]
         scan_frame = np.stack([scan_frame] * 3, axis=0)
+        
+        # Apply transformations if provided
+        if self.transform:
+            scan_frame = np.transpose(scan_frame, (1,2,0))
+            scan_frame = self.transform(scan_frame)
         return {
             "patient_id": patient_id,
             "frame": scan_frame,
@@ -83,9 +100,23 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
 
 
 def sanity_check_dataset():
-    # Instantiate the dataset
-    dataset = UnimodalCTDataset(split='all', dataset_path =  "data/processed")
 
+    transform = transforms.Compose([
+        transforms.ToTensor(),    
+        # Apply a random subset of the following transformations
+        transforms.RandomApply([
+            transforms.RandomRotation(degrees=10),       # Random rotation
+            transforms.ColorJitter(brightness=0.2, contrast=0.2),  # Adjust brightness/contrast
+            transforms.GaussianBlur(kernel_size=(5,5),sigma=(0.1,0.5))
+        ], p=0.5),  # Only apply the above transformations with a probability of 0.5
+    ])
+    # Instantiate the dataset
+    dataset = UnimodalCTDataset(split='all', dataset_path =  "data/processed", transform = transform)
+
+    # Create a WeightedRandomSampler using the calculated weights
+    sampler = WeightedRandomSampler(weights=dataset.weights, num_samples=len(dataset.weights), replacement=True)
+
+    
     # Check stats of dataset
     print(f"Dataset stats: {dataset.stats()}")
 
@@ -116,4 +147,4 @@ def sanity_check_dataset():
     print(f"Batch moved to device: {device}")
 
 if __name__ == "__main__":
-    sanity_check_dataset
+    sanity_check_dataset()
