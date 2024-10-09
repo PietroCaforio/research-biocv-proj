@@ -95,6 +95,31 @@ class UnimodalCTDataset(torch.utils.data.Dataset):
         """
         batch['frame'] = batch['frame'].to(device)
         batch['label'] = batch['label'].to(device)
+    
+    
+    def compute_subset_weights(self, subset_indices):
+        """Static method to create a weighted sampler for a given subset of the dataset."""
+        # Get the labels of the subset items using the original dataset
+        subset_labels = [self.items[i] for i in subset_indices]
+
+        # Calculate the class frequency for the subset
+        class_counts = {k: 0 for k in self.map_classes.values()}
+        for item in subset_labels:
+            patient_id = item.split("_")[0].split("/")[0]
+            label = self.labels[patient_id]
+            class_counts[self.map_classes[label]] += 1
+
+        # Calculate class weights for the subset
+        total_samples = len(subset_indices)
+        class_weights = {k: total_samples / (v * len(class_counts)) if v > 0 else 0 for k, v in class_counts.items()}
+
+        # Assign a weight to each sample in the subset based on its class
+        subset_weights = []
+        for item in subset_labels:
+            patient_id = item.split("_")[0].split("/")[0]
+            label = self.labels[patient_id]
+            subset_weights.append(class_weights[self.map_classes[label]])
+        return subset_weights
 
 
 
