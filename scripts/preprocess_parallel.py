@@ -21,7 +21,8 @@ from multiprocessing import Pool
 def thread(params):
     args = params["args"]
     row = params["row"]
-    target_depths = {"G1":140, "G2":16, "G3":46}
+    target_depths = {"G1":66, "G2":66, "G3":66}
+    fix_depth = args.fix_depth 
     root_path = os.path.normpath('../data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/CPTAC-PDA')
     segmentation_root = os.path.normpath('../data/raw/Segmentations/')
     metadata = pd.read_csv('../data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/metadata.csv')
@@ -64,7 +65,7 @@ def thread(params):
         if patient_id not in validation_patients and cancer_grade != "G2":
             left_index = min(occupied_slices) - 1
             right_index = max(occupied_slices) + 1
-            while len(occupied_slices) < target_depths[cancer_grade.strip()] and target_depths[cancer_grade.strip()] != "G2":
+            while len(occupied_slices) < target_depths[cancer_grade.strip()] and cancer_grade.strip() != "G2":
                 if left_index >= 0:
                     occupied_slices.insert(0, left_index)  # Add frame to the left (start of the list)
                     left_index -= 1
@@ -73,7 +74,18 @@ def thread(params):
                     right_index += 1
         elif cancer_grade == "G2": print(f"G2 patient {patient_id} not padded") 
         else: print(f"validation patient or G2 patient {patient_id} not padded")
-                
+    
+    if args.fix_depth is not None:
+        left_index = min(occupied_slices) - 1
+        right_index = max(occupied_slices) + 1
+        while len(occupied_slices) < fix_depth :
+            if left_index >= 0:
+                occupied_slices.insert(0, left_index)  # Add frame to the left (start of the list)
+                left_index -= 1
+            if len(occupied_slices) < fix_depth and right_index < len(vol):
+                occupied_slices.append(right_index)  # Add frame to the right (end of the list)
+                right_index += 1
+            
         
     
     output_path = args.destination
@@ -98,6 +110,8 @@ if __name__=="__main__":
     parser.add_argument("--oversampling", type = bool, default=False)
     parser.add_argument("--destination", type=str, default="../data/processed/CT/")
     parser.add_argument("--np", type=int, default=4)
+    parser.add_argument("--fix_depth", type=int, default=None)
+    
     args = parser.parse_args()
     
     segmentations = pd.read_csv('../data/Metadata_Report_CPTAC-PDA_2023_07_14.csv')
@@ -109,7 +123,7 @@ if __name__=="__main__":
     rows = [{"row":row, "args":args} for index, row in segmentations.iterrows()]
     with Pool(args.np) as p:
         results = p.map(thread, rows)
-    
+    results = set(results)
     # Write the results to the labels file after processing is done
     with open("../data/processed_oversampling/labels.txt", "w") as labels_f:
         for result in results:
