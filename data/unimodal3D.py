@@ -86,7 +86,7 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
         :param index: index of the dataset sample that will be returned
         :return: a dictionary of data corresponding to the shape. In particular, this dictionary has keys
                  "patient", a string of the patient's name 
-                 "frame", a numpy float32 array representing the CT scan's frame
+                 "volume", a numpy float32 array representing the CT scan's frame
                  "label", a number in [0, 2] representing the tumor grade
         """
         
