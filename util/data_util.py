@@ -89,7 +89,7 @@ def load_single_volume(folder_path):
     
     return np.array(img_vol), vox_dim, dicom_slices
 
-def sget_occupied_slices(rtstruct_path, dicom_slices):
+def get_occupied_slices(rtstruct_path, dicom_slices):
     # Load the RTSTRUCT file
     rtstruct = dicom.read_file(rtstruct_path)
     

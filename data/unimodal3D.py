@@ -124,7 +124,7 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
 
 def sanity_check_dataset():
     # Instantiate the dataset
-    dataset = UnimodalCTDataset3D(split='val', dataset_path =  "data/processed/")
+    dataset = UnimodalCTDataset3D(split='all', dataset_path =  "data/processed/")
     print(f"MAX DEPTH: {dataset.max_depth}")
     # Check stats of dataset
     print(f"Dataset stats: {dataset.stats()}")
