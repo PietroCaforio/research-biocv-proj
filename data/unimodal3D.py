@@ -52,7 +52,7 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
     dataset_path = "data/processed/"
     map_classes = {"G1":0,"G2":1,"G3":2}
     
-    def __init__(self, split:str,dataset_path:str = None, vol_std_method:str = "padding"):
+    def __init__(self, split:str,dataset_path:str = None, vol_std_method:str = None):
         """
         Args:
             split (str): Choose between 'train', 'val', 'overfit' split
@@ -96,7 +96,8 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
         item_class = self.map_classes[self.labels[patient_id]]
         
         vol = np.load(os.path.join(self.dataset_path,"CT/"+item))
-        vol = VolumeStandardizer().standardize(volume=vol,target_depth=self.max_depth, method = self.vol_std_method) 
+        if self.vol_std_method is not None:
+            vol = VolumeStandardizer().standardize(volume=vol,target_depth=self.max_depth, method = self.vol_std_method) 
         return {
             "patient_id": patient_id,
             "volume": vol,
@@ -124,7 +125,7 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
 
 def sanity_check_dataset():
     # Instantiate the dataset
-    dataset = UnimodalCTDataset3D(split='all', dataset_path =  "data/processed/")
+    dataset = UnimodalCTDataset3D(split='all', dataset_path =  "data/processed_3D_pad/")
     print(f"MAX DEPTH: {dataset.max_depth}")
     # Check stats of dataset
     print(f"Dataset stats: {dataset.stats()}")
