@@ -91,6 +91,11 @@ def load_single_volume(folder_path):
 
 def get_occupied_slices(rtstruct_path, dicom_slices):
     # Load the RTSTRUCT file
+    rtstruct_path = os.path.abspath(rtstruct_path)
+    if rtstruct_path.startswith(u"\\\\"):
+        rtstruct_path = u"\\\\?\\UNC\\" + rtstruct_path[2:]
+    else:
+        rtstruct_path = u"\\\\?\\" + rtstruct_path
     rtstruct = dicom.read_file(rtstruct_path)
     
     # Extract the Contour Sequences
