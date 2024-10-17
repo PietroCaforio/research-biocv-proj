@@ -51,9 +51,13 @@ def thread_CPTACUCEC(params):
     volume_folder = volume_folder.iloc[0]
     volume_folder = os.path.join(root_path,os.path.join(*(volume_folder.split(os.path.sep)[2:])))
     #print(volume_folder)
-    vol, dim, dicom_slices = load_single_volume(volume_folder)
+    vol, dim, dicom_slices, direction = load_single_volume(volume_folder)
     #print(vol.shape)
-    
+    if direction == "sagittal":
+        vol = vol.transpose(1,0,2)
+    elif direction == "coronal":
+        
+        vol = vol.transpose(2,0,1)
     segmentation_folder = row["File Location"]
     
     #dicom.dcmread(segmentation_folder)
@@ -66,7 +70,7 @@ def thread_CPTACUCEC(params):
         seg_path = u"\\\\?\\" + seg_path
     seg_file = os.listdir(seg_path)[0]
     #print(os.path.join(segmentation_root,segmentation_folder,seg_file))
-    occupied_slices = get_occupied_slices(os.path.join(segmentation_root,segmentation_folder,seg_file), dicom_slices)
+    occupied_slices = get_occupied_slices(os.path.join(segmentation_root,segmentation_folder,seg_file), dicom_slices, direction)
     
     
     
@@ -140,7 +144,7 @@ def thread_CPTACPDA(params):
     volume_folder = volume_folder.iloc[0]
     volume_folder = os.path.join(root_path,os.path.join(*(volume_folder.split(os.path.sep)[2:])))
     #print(volume_folder)
-    vol, dim, dicom_slices = load_single_volume(volume_folder)
+    vol, dim, dicom_slices, direction = load_single_volume(volume_folder)
     #print(vol.shape)
     
     segmentation_folder = row["File Location"]

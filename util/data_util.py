@@ -59,14 +59,22 @@ def load_single_volume(folder_path):
         folder_path = u"\\\\?\\" + folder_path
         
     dcm_ext = ".dcm"  # Assuming DICOM files have the extension '.dcm'
-        
+    direction = None    
     for path, _, files in sorted(os.walk(folder_path)): 
         for filename in sorted(files): 
             if filename.endswith(dcm_ext):
                 img_dcm_std = dicom.dcmread(os.path.join(folder_path, filename))
                 img = img_dcm_std.pixel_array
                 img_vol.append(img)
-                
+                if direction is None:
+                    
+                    if img_dcm_std.ImageOrientationPatient == [0, 1, 0, 0, 0, -1]:
+                        direction = "sagittal"
+                    elif img_dcm_std.ImageOrientationPatient == [1, 0, 0, 0, 0, -1]: 
+                        direction = "coronal"
+                    else: #[1, 0, 0, 0, 1, 0]
+                        direction = "axial"
+                         
                 if not hasattr(img_dcm_std, 'SpacingBetweenSlices'): 
                     spacing = 0
                 else:
@@ -87,9 +95,9 @@ def load_single_volume(folder_path):
     y_space = voxel_y.mean()
     vox_dim = (x_space, y_space, z_space)
     
-    return np.array(img_vol), vox_dim, dicom_slices
+    return np.array(img_vol), vox_dim, dicom_slices, direction
 
-def get_occupied_slices(rtstruct_path, dicom_slices):
+def get_occupied_slices(rtstruct_path, dicom_slices, direction = "axial"):
     # Load the RTSTRUCT file
     rtstruct_path = os.path.abspath(rtstruct_path)
     if rtstruct_path.startswith(u"\\\\"):
@@ -102,7 +110,12 @@ def get_occupied_slices(rtstruct_path, dicom_slices):
     contour_sequences = rtstruct.ROIContourSequence
     
     # Get the z-coordinates of the DICOM slices
-    slice_z_positions = [float(slice.ImagePositionPatient[2]) for slice in dicom_slices]
+    if direction == "sagittal":
+        slice_z_positions = [float(slice.ImagePositionPatient[0]) for slice in dicom_slices]
+    elif direction == "coronal":
+        slice_z_positions = [float(slice.ImagePositionPatient[1]) for slice in dicom_slices]
+    else:
+        slice_z_positions = [float(slice.ImagePositionPatient[2]) for slice in dicom_slices]
     #if rtstruct.PatientID.strip() == "C3L-02118":
     #            print("Slice z positions: \n",slice_z_positions)
     # Initialize a set to store occupied slice indices
@@ -116,7 +129,12 @@ def get_occupied_slices(rtstruct_path, dicom_slices):
             contour_data = contour.ContourData
             
             # Extract z-values from contour data
-            contour_z_values = contour_data[2::3]  # Every third value is a z-coordinate
+            if direction == "axial":
+                contour_z_values = contour_data[2::3]  # Every third value is a z-coordinate
+            elif direction == "coronal":
+                contour_z_values = contour_data[1::3]
+            elif direction == "sagittal":
+                contour_z_values = contour_data[0::3]
             #if rtstruct.PatientID.strip() == "C3L-02118":
             #    print("contour values of C3L-02118: \n",contour_z_values) 
                 
@@ -125,7 +143,7 @@ def get_occupied_slices(rtstruct_path, dicom_slices):
             # Iterate over the slice_z_positions to check for close values
                 for i, slice_z in enumerate(slice_z_positions):
                     # Check if z is close to slice_z within the threshold
-                    if math.isclose(z, slice_z, abs_tol=0.9):
+                    if math.isclose(z, slice_z, abs_tol=0.999):
                         slice_index = i  # Get the index of the matching z position
                         occupied_slices.add(slice_index)  # Add the index to the occupied_slices set
     
