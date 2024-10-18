@@ -67,7 +67,7 @@ def load_single_volume(folder_path):
                 img = img_dcm_std.pixel_array
                 img_vol.append(img)
                 if direction is None:
-                    
+                    #print(img_dcm_std.PatientID,img_dcm_std.ImageOrientationPatient)
                     if img_dcm_std.ImageOrientationPatient == [0, 1, 0, 0, 0, -1]:
                         direction = "sagittal"
                     elif img_dcm_std.ImageOrientationPatient == [1, 0, 0, 0, 0, -1]: 
