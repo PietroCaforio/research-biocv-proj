@@ -56,8 +56,9 @@ def thread_CPTACUCEC(params):
     if direction == "sagittal":
         vol = vol.transpose(1,0,2)
     elif direction == "coronal":
-        
         vol = vol.transpose(2,0,1)
+    
+        
     segmentation_folder = row["File Location"]
     
     #dicom.dcmread(segmentation_folder)
