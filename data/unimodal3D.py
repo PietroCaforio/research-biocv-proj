@@ -80,7 +80,17 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
                     self.items.extend([row+"/"+file])
                     self.classfreq[self.labels[row]] += 1     
         self.max_depth        
+    def calculate_weights(self):
+        """Calculates weights for each sample in the dataset based on class frequencies."""
+        weights = []
         
+        for item in self.items:
+            patient_id = item.split("/")[0]
+            #label = self.map_classes[self.labels[patient_id]]
+            # Calculate weight for the sample
+            weight = 1 / (self.classfreq[self.labels[patient_id]])
+            weights.append(weight)
+        return weights
     def __getitem__(self, index):
         """
         :param index: index of the dataset sample that will be returned
@@ -126,6 +136,8 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
 def sanity_check_dataset():
     # Instantiate the dataset
     dataset = UnimodalCTDataset3D(split='train', dataset_path =  "data/processed_CPTACUCEC_3D_pad/")
+    print(dataset.calculate_weights()[:10])
+    
     print(f"MAX DEPTH: {dataset.max_depth}")
     # Check stats of dataset
     print(f"Dataset stats: {dataset.stats()}")
