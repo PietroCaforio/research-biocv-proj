@@ -26,7 +26,7 @@ def thread_CPTACUCEC(params):
     root_path = os.path.normpath('../data/raw/69PatientsCPTACUCEC/manifest-1728901427271/CPTAC-UCEC')
     segmentation_root = os.path.normpath('../data/raw/69PatientsCPTACUCEC/manifest-1728901427271/')
     metadata = pd.read_csv('../data/raw/69PatientsCPTACUCEC/manifest-1728901427271/metadata.csv')
-    target_shape = [224,224,224]
+    target_shape = [350,350,350]
     #annotations = pd.read_csv('../data/clinical_annotations.tsv',  sep='\t')
     clinical_data_list = [
         pd.read_csv("../data/CPTACUCEC_clinicalannotationsProteom.csv"),
