@@ -38,7 +38,13 @@ def thread_CPTACUCEC(params):
         pd.read_csv("../data/CPTACUCEC_clinicalannotationsPhosphoproteom.csv")
     ]
     annotations = pd.concat(clinical_data_list)
+    done_set = set(Path("./progress.txt").read_text().splitlines())
     
+    print("Processing:",row["index"], "...")
+    if args.progress:
+        if row["index"] in done_set:
+            print("Skipped", row["index"])
+            return None
     validation_patients = Path("../data/processed_CPTACUCEC_3D/val.txt").read_text().splitlines()
     referenced_series_instance_uid = row["ReferencedSeriesInstanceUID"]
     
@@ -81,9 +87,11 @@ def thread_CPTACUCEC(params):
     cancer_grade = annotations.loc[annotations['Case Submitter ID'] == patient_id]['Tumor Grade'].iloc[0]
     
     #Oversample slices with nontumor slices if needed
+    
     if not occupied_slices: 
         print(f"Skipped patient: {patient_id}")
         return None
+    
     if args.oversampling:
         if patient_id not in validation_patients and cancer_grade != "G2":
             left_index = min(occupied_slices) - 1
@@ -121,6 +129,8 @@ def thread_CPTACUCEC(params):
         i += 1
     os.makedirs(os.path.join(output_path,patient_id), exist_ok = True)
     np.save(os.path.join(output_path,patient_id,'%s.npy'% i), vol[occupied_slices])
+    with open("progress.txt","a") as progress_file:
+        progress_file.write(row["index"]+"\n")
     return patient_id, cancer_grade
 
 def thread_CPTACPDA(params):
@@ -217,6 +227,7 @@ if __name__=="__main__":
     parser.add_argument("--np", type=int, default=4)
     parser.add_argument("--fix_depth", type=int, default=None)
     parser.add_argument("--dataset", type=str, default="CPTAC_PDA")
+    parser.add_argument("--progress", type = bool, default=False) 
     
     args = parser.parse_args()
     
@@ -230,8 +241,8 @@ if __name__=="__main__":
         segmentations_metadata = pd.read_csv('../data/raw/69PatientsCPTACUCEC/manifest-1728901427271/metadata.csv')
         segmentations = segmentations.set_index("SeriesInstanceUID").join(segmentations_metadata.set_index("Series UID")["File Location"], how = "inner")
         segmentations = segmentations[segmentations["Annotation Type"] == "Segmentation"]
-        
-    #print(segmentations.head())         
+    segmentations = segmentations.reset_index()
+    #print(segmentations["index"].head())         
     rows = [{"row":row, "args":args} for index, row in segmentations.iterrows()]
     if args.dataset == "CPTAC_PDA":
         with Pool(args.np) as p:
