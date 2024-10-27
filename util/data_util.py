@@ -137,7 +137,6 @@ def get_occupied_slices(rtstruct_path, dicom_slices, direction = "axial"):
                 contour_z_values = contour_data[0::3]
             #if rtstruct.PatientID.strip() == "C3L-02118":
             #    print("contour values of C3L-02118: \n",contour_z_values) 
-                
             # Match contour z-values with slice z-positions
             for z in contour_z_values:
             # Iterate over the slice_z_positions to check for close values
