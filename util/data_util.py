@@ -6,9 +6,10 @@ import skimage.transform
 from skimage import exposure
 from scipy.ndimage import zoom
 import cv2
-OPENSLIDE_PATH = "C:\\Users\\peter\\Documents\\Uni\\Second_Year\\MDP\\Openslide\\openslide-bin-4.0.0.3-windows-x64\\bin"
-with os.add_dll_directory(OPENSLIDE_PATH):
-        import openslide
+if os.name == "nt":
+    OPENSLIDE_PATH = "C:\\Users\\peter\\Documents\\Uni\\Second_Year\\MDP\\Openslide\\openslide-bin-4.0.0.3-windows-x64\\bin"
+    with os.add_dll_directory(OPENSLIDE_PATH):
+            import openslide
 import openslide
 from openslide import open_slide
 
@@ -52,17 +53,20 @@ def load_single_volume(folder_path):
     
     # Handle long paths
     folder_path = os.path.abspath(folder_path)
-
-    if folder_path.startswith(u"\\\\"):
-        folder_path = u"\\\\?\\UNC\\" + folder_path[2:]
-    else:
-        folder_path = u"\\\\?\\" + folder_path
-        
+    if os.name == 'nt':
+        if folder_path.startswith(u"\\\\"):
+            folder_path = u"\\\\?\\UNC\\" + folder_path[2:]
+        else:
+            folder_path = u"\\\\?\\" + folder_path
+            
     dcm_ext = ".dcm"  # Assuming DICOM files have the extension '.dcm'
     direction = None    
+    print("folder_path:", folder_path)
     for path, _, files in sorted(os.walk(folder_path)): 
         for filename in sorted(files): 
+            
             if filename.endswith(dcm_ext):
+                
                 img_dcm_std = dicom.dcmread(os.path.join(folder_path, filename))
                 img = img_dcm_std.pixel_array
                 img_vol.append(img)
@@ -100,10 +104,11 @@ def load_single_volume(folder_path):
 def get_occupied_slices(rtstruct_path, dicom_slices, direction = "axial"):
     # Load the RTSTRUCT file
     rtstruct_path = os.path.abspath(rtstruct_path)
-    if rtstruct_path.startswith(u"\\\\"):
-        rtstruct_path = u"\\\\?\\UNC\\" + rtstruct_path[2:]
-    else:
-        rtstruct_path = u"\\\\?\\" + rtstruct_path
+    if os.name == "nt":
+        if rtstruct_path.startswith(u"\\\\"):
+            rtstruct_path = u"\\\\?\\UNC\\" + rtstruct_path[2:]
+        else:
+            rtstruct_path = u"\\\\?\\" + rtstruct_path
     rtstruct = dicom.read_file(rtstruct_path)
     
     # Extract the Contour Sequences
