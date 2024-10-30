@@ -11,10 +11,12 @@ import time
 import argparse
 from multiprocessing import Pool
 import re
-
-OPENSLIDE_PATH = "C://Users//peter//Documents//Uni//Second_Year//MDP//Openslide//openslide-bin-4.0.0.3-windows-x64//bin"
-with os.add_dll_directory(OPENSLIDE_PATH):
-        import openslide
+if os.name=="nt":
+    OPENSLIDE_PATH = "C://Users//peter//Documents//Uni//Second_Year//MDP//Openslide//openslide-bin-4.0.0.3-windows-x64//bin"
+    with os.add_dll_directory(OPENSLIDE_PATH):
+            import openslide
+else:
+    import openslide
 
 
 
@@ -43,7 +45,7 @@ def thread(params):
     target_depths = {"G1":66, "G2":66, "G3":66}
     
     #Track progress
-    done_set = set(Path("./progress.txt").read_text().splitlines())
+    done_set = set(Path(f"./progress{args.dataset}.txt").read_text().splitlines())
     
     print("Processing:",row["index"], "...")
     
@@ -53,10 +55,11 @@ def thread(params):
             return None
         
     patient_id = row["PatientID"].strip()
-    cancer_grade = annotations.loc[annotations['Case Submitter ID'] == patient_id]['Tumor Grade'].iloc[0] #label
+    print("PATIENT:",patient_id)
     referenced_series_instance_uid = row["ReferencedSeriesInstanceUID"].strip()
     segmentation_folder = row["File Location"]    
     segmentation_folder = segmentation_folder.split('.\\')[-1]
+    if os.name != "nt": segmentation_folder = segmentation_folder.replace('\\',"/").replace('-NA','')
     
     
     #Get folder location of volume to be processed associated with segmentation 
@@ -65,7 +68,11 @@ def thread(params):
     if volume_folder.empty:
         print("Empty volume folder")
         return None
+    cancer_grade = annotations.loc[annotations['Case Submitter ID'] == patient_id]['Tumor Grade'].iloc[0] #label
+    
     volume_folder = volume_folder.iloc[0]
+    print(volume_folder)
+    if os.name != "nt": volume_folder = volume_folder.replace('\\','/').replace('-NA','')
     volume_folder = os.path.join(root_path,os.path.join(*(volume_folder.split(os.path.sep)[2:])))
     vol, dim, dicom_slices, direction = load_single_volume(volume_folder)
     
@@ -78,13 +85,15 @@ def thread(params):
     
     #Get segmentation path
     seg_path = os.path.join(segmentation_root,segmentation_folder)
+    
     seg_path = os.path.abspath(seg_path)
     
     #Support long paths
-    if seg_path.startswith(u"\\\\"):
-        seg_path = u"\\\\?\\UNC\\" + seg_path[2:]
-    else:
-        seg_path = u"\\\\?\\" + seg_path
+    if os.name == "nt":
+        if seg_path.startswith(u"\\\\"):
+            seg_path = u"\\\\?\\UNC\\" + seg_path[2:]
+        else:
+            seg_path = u"\\\\?\\" + seg_path
     seg_file = os.listdir(seg_path)[0]
     
     #Get slices of volume occupied by segmentation (tumor)
@@ -135,8 +144,9 @@ def thread(params):
         i += 1
     os.makedirs(os.path.join(output_path,patient_id), exist_ok = True)
     np.save(os.path.join(output_path,patient_id,'%s.npy'% i), vol[occupied_slices])
-    with open("progress.txt","a") as progress_file:
+    with open(f"progress{args.dataset}.txt","a") as progress_file:
         progress_file.write(row["index"]+"\n")
+    
     return patient_id, cancer_grade
 
 
@@ -162,7 +172,7 @@ def main(args):
         segmentation_root = os.path.normpath('../data/raw/69PatientsCPTACUCEC/manifest-1728901427271/')
         metadata = pd.read_csv('../data/raw/69PatientsCPTACUCEC/manifest-1728901427271/metadata.csv')
         validation_patients = Path("../data/processed_CPTACUCEC_3D/val.txt").read_text().splitlines()    
-    else:
+    elif args.dataset == "CPTAC_PDA":
         
         segmentations = pd.read_csv('../data/Metadata_Report_CPTAC-PDA_2023_07_14.csv')
         segmentations_metadata = pd.read_csv('../data/raw/Segmentations/metadata.csv')
@@ -175,9 +185,11 @@ def main(args):
         annotations = pd.read_csv('../data/clinical_annotations.tsv',  sep='\t')
         annotations.columns = annotations.columns.to_series().apply(change_case)
         validation_patients = Path("../data/processed_oversampling/val.txt").read_text().splitlines()
+    else: print(args.dataset, "is not a valid option, either CPTAC_PDA or CPTAC_UCEC")
     
+    segmentations.index.name = 'index'
     segmentations = segmentations.reset_index()
-
+    
     # Prepare input for thread pool
     rows = [
         {
@@ -191,14 +203,19 @@ def main(args):
         }
         for index, row in segmentations.iterrows()
     ]
+    print(args.destination.split('/')[:-2])
+    if args.debug:
+        results = []
+        for row in rows:
+            results.extend(thread(row))
     with Pool(args.np) as p:
         results = p.map(thread, rows)
     
     # Each thread returns PatientID, cancer_grade pairs
     results = set(results)
-     
+    
     # Generate the labels file
-    with open(os.path.join('/'.join(args.destination.split('/')[:-1]),"labels.txt"), "w") as labels_f:
+    with open(os.path.join('/'.join(args.destination.split('/')[:-2]),"labels.txt"), "w") as labels_f:
         for result in results:
             if result is not None:
                 patient_id, cancer_grade = result
@@ -215,6 +232,7 @@ if __name__=="__main__":
     parser.add_argument("--dataset", type=str, default="CPTAC_PDA")
     parser.add_argument("--progress", type = bool, default=False) 
     parser.add_argument("--target_shape", type = int, default=224) 
+    parser.add_argument("--debug", type = bool, default=False) 
     
     args = parser.parse_args()
     main(args)
