@@ -12,3 +12,5 @@
 !*.github/workflows/ci.yaml
 !*.csv
 !*.tsv
+!*.sh
+!*.yml
