@@ -4,6 +4,7 @@ import pandas as pd
 import concurrent.futures
 from pathlib import Path
 import sys
+import logging
 sys.path.insert(0, '../')
 from util.data_util import *
 from datetime import datetime
@@ -18,7 +19,22 @@ if os.name=="nt":
 else:
     import openslide
 
-
+def setup_logging():
+    """Sets up the logging configuration."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_filename = f"processing_log_{timestamp}.log"
+    logging.basicConfig(
+        filename=log_filename,
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        filemode="w"
+    )
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    console.setFormatter(formatter)
+    logging.getLogger().addHandler(console)
+    logging.info("Logging setup complete.")
 
 def change_case(str):
     # Split the string by underscores
@@ -47,15 +63,15 @@ def thread(params):
     #Track progress
     done_set = set(Path(f"./progress{args.dataset}.txt").read_text().splitlines())
     
-    print("Processing:",row["index"], "...")
+    #print("Processing:",row["index"], "...")
     
-    if args.progress:
-        if row["index"] in done_set:
-            print(row["index"], " already done, skipped")
-            return None
+    if args.progress and row["File Location"] in done_set:
+        logging.info(f"{row['File Location']} already done, skipped")
+        return None
         
     patient_id = row["PatientID"].strip()
-    print("PATIENT:",patient_id)
+    logging.info(f"Processing patient: {patient_id}")
+    
     referenced_series_instance_uid = row["ReferencedSeriesInstanceUID"].strip()
     segmentation_folder = row["File Location"]    
     segmentation_folder = segmentation_folder.split('.\\')[-1]
@@ -64,14 +80,14 @@ def thread(params):
     
     #Get folder location of volume to be processed associated with segmentation 
     volume_folder = metadata[metadata["Series UID"]==referenced_series_instance_uid]["File Location"]
-    
+    index = row["index"]
     if volume_folder.empty:
-        print("Empty volume folder")
+        logging.warning(f"Empty volume folder for patient {patient_id}. row index: {index}")
         return None
     cancer_grade = annotations.loc[annotations['Case Submitter ID'] == patient_id]['Tumor Grade'].iloc[0] #label
     
     volume_folder = volume_folder.iloc[0]
-    print(volume_folder)
+    #print(volume_folder)
     if os.name != "nt": volume_folder = volume_folder.replace('\\','/').replace('-NA','')
     volume_folder = os.path.join(root_path,os.path.join(*(volume_folder.split(os.path.sep)[2:])))
     vol, dim, dicom_slices, direction = load_single_volume(volume_folder)
@@ -103,8 +119,8 @@ def thread(params):
     #Remap the segmentation slice coordinates to the new volume coordinates
     occupied_slices = remap_occupied_slices(occupied_slices, zoom_factors[0])
     #If volume has no segmentation, drop it
-    if not occupied_slices: 
-        print(f"Skipped volume {volume_folder} of patient: {patient_id}")
+    if not occupied_slices:
+        logging.warning(f"Skipped volume {volume_folder} for patient {patient_id}: No segmentation found.")
         return None
     
     if args.oversampling:
@@ -145,12 +161,15 @@ def thread(params):
     os.makedirs(os.path.join(output_path,patient_id), exist_ok = True)
     np.save(os.path.join(output_path,patient_id,'%s.npy'% i), vol[occupied_slices])
     with open(f"progress{args.dataset}.txt","a") as progress_file:
-        progress_file.write(row["index"]+"\n")
+        progress_file.write(row["File Location"]+"\n")
+    
+    logging.info(f"Successfully processed patient {patient_id}")
     
     return patient_id, cancer_grade
 
 
 def main(args):
+    setup_logging()
     # Given the dataset selected load the needed files for preprocessing (segmentations, annotations, metadata ...)
     if args.dataset == "CPTAC_UCEC":
         segmentations = pd.read_csv("../data/Metadata_Report_CPTAC-UCEC_2023_07_14.csv")
@@ -185,11 +204,13 @@ def main(args):
         annotations = pd.read_csv('../data/clinical_annotations.tsv',  sep='\t')
         annotations.columns = annotations.columns.to_series().apply(change_case)
         validation_patients = Path("../data/processed_oversampling/val.txt").read_text().splitlines()
-    else: print(args.dataset, "is not a valid option, either CPTAC_PDA or CPTAC_UCEC")
+    else: 
+        logging.error(f"{args.dataset} is not a valid option. Please choose either CPTAC_PDA or CPTAC_UCEC.")
+        return
     
     segmentations.index.name = 'index'
-    segmentations = segmentations.reset_index()
     
+    segmentations = segmentations.reset_index()
     # Prepare input for thread pool
     rows = [
         {
@@ -203,14 +224,14 @@ def main(args):
         }
         for index, row in segmentations.iterrows()
     ]
-    print(args.destination.split('/')[:-2])
     if args.debug:
         results = []
         for row in rows:
             results.extend(thread(row))
-    with Pool(args.np) as p:
-        results = p.map(thread, rows)
-    
+    else:
+        with Pool(args.np) as p:
+            results = p.map(thread, rows)
+        
     # Each thread returns PatientID, cancer_grade pairs
     results = set(results)
     
@@ -220,7 +241,8 @@ def main(args):
             if result is not None:
                 patient_id, cancer_grade = result
                 labels_f.write(f"{patient_id},{cancer_grade}\n")
-    
+                
+    logging.info("Processing complete.")
 
 if __name__=="__main__":
     start = time.time()
@@ -237,4 +259,4 @@ if __name__=="__main__":
     args = parser.parse_args()
     main(args)
     end = time.time()
-    print("time elapsed: ",time.strftime('%H:%M:%S',time.gmtime(end - start)))    
+    logging.info(f"Time elapsed: {time.strftime('%H:%M:%S', time.gmtime(end - start))}")   
