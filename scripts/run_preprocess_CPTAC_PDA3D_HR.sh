@@ -1,0 +1,1 @@
+python preprocess_parallel.py --dataset CPTAC_PDA --destination ../data/processed_3D_HR_PAD/CT/ --target_shape 368 --fix_depth 108 --progress True
