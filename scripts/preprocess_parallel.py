@@ -39,9 +39,11 @@ def setup_logging():
 def change_case(str):
     # Split the string by underscores
     components = str.split('_')
+    if len(components) <= 1: return str
     # Capitalize each component
     camel_case = ' '.join(word.capitalize() for word in components)
     camel_case = camel_case.replace("Id", "ID")
+    camel_case = camel_case.replace("id", "ID")
     return camel_case
 
 def thread(params):
@@ -170,44 +172,32 @@ def thread(params):
 
 def main(args):
     setup_logging()
-    # Given the dataset selected load the needed files for preprocessing (segmentations, annotations, metadata ...)
-    if args.dataset == "CPTAC_UCEC":
-        segmentations = pd.read_csv("../data/Metadata_Report_CPTAC-UCEC_2023_07_14.csv")
-        segmentations_metadata = pd.read_csv('../data/raw/69PatientsCPTACUCEC/manifest-1728901427271/metadata.csv')
-        segmentations = segmentations.set_index("SeriesInstanceUID").join(segmentations_metadata.set_index("Series UID")["File Location"], how = "inner")
-        segmentations = segmentations[segmentations["Annotation Type"] == "Segmentation"]
-
-        clinical_data_list = [
-            pd.read_csv("../data/CPTACUCEC_clinicalannotationsProteom.csv"),
-            pd.read_csv("../data/CPTACUCEC_clinicalIDC.csv"),
-            pd.read_csv("../data/CPTACUCEC_clinicalConfirmatoryGlyco.csv"),
-            pd.read_csv("../data/CPTACUCEC_.clinicalConfirmatoryProteome.csv"),
-            pd.read_csv("../data/CPTACUCEC_clinicalannotations.csv"),
-            pd.read_csv("../data/CPTACUCEC_clinicalannotationsAcetylome.csv"),
-            pd.read_csv("../data/CPTACUCEC_clinicalannotationsPhosphoproteom.csv")
-        ]
-        annotations = pd.concat(clinical_data_list)
-        root_path = os.path.normpath('../data/raw/69PatientsCPTACUCEC/manifest-1728901427271/CPTAC-UCEC')
-        segmentation_root = os.path.normpath('../data/raw/69PatientsCPTACUCEC/manifest-1728901427271/')
-        metadata = pd.read_csv('../data/raw/69PatientsCPTACUCEC/manifest-1728901427271/metadata.csv')
-        validation_patients = Path("../data/processed_CPTACUCEC_3D/val.txt").read_text().splitlines()    
-    elif args.dataset == "CPTAC_PDA":
-        
-        segmentations = pd.read_csv('../data/Metadata_Report_CPTAC-PDA_2023_07_14.csv')
-        segmentations_metadata = pd.read_csv('../data/raw/Segmentations/metadata.csv')
-        segmentations = segmentations.set_index("SeriesInstanceUID").join(segmentations_metadata.set_index("Series UID")["File Location"], how = "inner")
-        segmentations = segmentations[segmentations["Annotation Type"] == "Segmentation"]
-
-        root_path = os.path.normpath('../data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/CPTAC-PDA')
-        segmentation_root = os.path.normpath('../data/raw/Segmentations/')
-        metadata = pd.read_csv('../data/raw/Dataset57PatientsCPTACPDA/manifest-1720346699071/metadata.csv')    
-        annotations = pd.read_csv('../data/clinical_annotations.tsv',  sep='\t')
-        annotations.columns = annotations.columns.to_series().apply(change_case)
-        validation_patients = Path("../data/processed_oversampling/val.txt").read_text().splitlines()
-    else: 
-        logging.error(f"{args.dataset} is not a valid option. Please choose either CPTAC_PDA or CPTAC_UCEC.")
-        return
     
+    
+    if args.load_args:
+        args_df = pd.read_csv(args.load_args, quotechar='"')
+        
+        for key in args_df.columns:
+            key = key.strip()
+            setattr(args,str(key),str(args_df.loc[0,key]))
+    
+    segmentations = pd.read_csv(args.segmentations)
+    segmentations_metadata = pd.read_csv(args.segmentations_metadata)
+    segmentations = segmentations.set_index("SeriesInstanceUID").join(segmentations_metadata.set_index("Series UID")["File Location"], how = "inner")
+    segmentations = segmentations[segmentations["Annotation Type"] == "Segmentation"]
+
+    clinical_data_list = [
+        pd.read_csv(path) if path.endswith(".csv") else pd.read_csv(path, sep="\t") for path in args.clinical_data_list.split(';')
+    ]
+    annotations = pd.concat(clinical_data_list)
+    
+    root_path = os.path.normpath(args.root_path)
+    segmentation_root = os.path.normpath(args.segmentation_root)
+    metadata = pd.read_csv(args.metadata)
+    annotations.columns = annotations.columns.to_series().apply(change_case)
+    validation_patients = Path(args.validation_patients).read_text().splitlines()
+    
+    # Given the dataset selected load the needed files for preprocessing (segmentations, annotations, metadata ...)
     segmentations.index.name = 'index'
     
     segmentations = segmentations.reset_index()
@@ -255,6 +245,16 @@ if __name__=="__main__":
     parser.add_argument("--progress", type = bool, default=False) 
     parser.add_argument("--target_shape", type = int, default=224) 
     parser.add_argument("--debug", type = bool, default=False) 
+    parser.add_argument("--load_args", type = str, default=None, help="Select (.csv) from which you can load arguments")
+    
+    
+    parser.add_argument("--segmentations", type = str, help = "Segmentations report (.csv) metadata")
+    parser.add_argument("--segmentations_metadata", type = str, help = "Segmentation's nbia data retriever (.csv) metadata")
+    parser.add_argument("--clinical_data_list", type = str, help = "List of clinical metadata (.csv) files. Single str if from shell")
+    parser.add_argument("--root_path", type = str, help = "Volumes's root path")
+    parser.add_argument("--segmentation_root", type = str, help = "Segmentation's dcm folder")
+    parser.add_argument("--metadata", type = str, help = "Volumes's metadata (.csv) file from nbia-data-retriever")
+    parser.add_argument("--validation_patients", type = str, help = "List of validation's patients (.txt)")
     
     args = parser.parse_args()
     main(args)
