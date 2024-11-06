@@ -1,1 +1,1 @@
-python preprocess_parallel.py --dataset CPTAC_PDA --destination ../data/processed_3D_pad/CT/ --fix_depth 66 
+python preprocess_parallel.py --load_args ./presets/CPTAC_PDA_55.csv --destination ../data/processed_3D_pad/CT/ --fix_depth 66 
