@@ -77,23 +77,53 @@ def thread(params):
     referenced_series_instance_uid = row["ReferencedSeriesInstanceUID"].strip()
     segmentation_folder = row["File Location"]    
     segmentation_folder = segmentation_folder.split('.\\')[-1]
-    if os.name != "nt": segmentation_folder = segmentation_folder.replace('\\',"/").replace('-NA','')
+    if os.name != "nt":
+        segmentation_folder = segmentation_folder.replace('\\',"/")
+        #Get segmentation path
+        seg_path = os.path.join(segmentation_root,segmentation_folder)
     
+        seg_path = os.path.abspath(seg_path)
+        if not os.path.exists(seg_path): 
+            segmentation_folder = segmentation_folder.replace('-NA','')
+    
+    seg_path = os.path.join(segmentation_root,segmentation_folder)
+    seg_path = os.path.abspath(seg_path)
+    #Support long paths
+    if os.name == "nt":
+        if seg_path.startswith(u"\\\\"):
+            seg_path = u"\\\\?\\UNC\\" + seg_path[2:]
+        else:
+            seg_path = u"\\\\?\\" + seg_path
+
+    seg_file = os.listdir(seg_path)[0]
     
     #Get folder location of volume to be processed associated with segmentation 
     volume_folder = metadata[metadata["Series UID"]==referenced_series_instance_uid]["File Location"]
     index = row["index"]
     if volume_folder.empty:
-        logging.warning(f"Empty volume folder for patient {patient_id}. row index: {index}")
+        logging.warning(f"Empty volume folder for patient {patient_id}. row index: {index}.")
         return None
-    cancer_grade = annotations.loc[annotations['Case Submitter ID'] == patient_id]['Tumor Grade'].iloc[0] #label
     
+    cancer_grade_df = annotations.loc[annotations['Case Submitter ID'] == patient_id]['Tumor Grade']
+    if cancer_grade_df.empty:
+        logging.warning(f"No annotation available for patient {patient_id}. Skipped.")
+        return None
+    
+    cancer_grade = cancer_grade_df.iloc[0] #label
     volume_folder = volume_folder.iloc[0]
     #print(volume_folder)
-    if os.name != "nt": volume_folder = volume_folder.replace('\\','/').replace('-NA','')
-    volume_folder = os.path.join(root_path,os.path.join(*(volume_folder.split(os.path.sep)[2:])))
-    vol, dim, dicom_slices, direction = load_single_volume(volume_folder)
     
+    if os.name != "nt": 
+        volume_folder = volume_folder.replace('\\','/')
+        volume_path = os.path.join(root_path,os.path.join(*(volume_folder.split(os.path.sep)[2:])))
+        if not os.path.exists(volume_path):
+            volume_folder = volume_folder.replace('-NA','')
+            volume_path = os.path.join(root_path,os.path.join(*(volume_folder.split(os.path.sep)[2:])))
+        volume_folder = volume_path
+    vol, dim, dicom_slices, direction = load_single_volume(volume_folder)
+    if vol is None:
+        logging.warning(f"Empty volume, no ImageOrientation for {volume_folder}")
+        return None
     #Convert volume orientation to axial if needed
     if direction == "sagittal":
         vol = vol.transpose(1,0,2)
@@ -101,18 +131,7 @@ def thread(params):
         vol = vol.transpose(2,0,1)
     else: direction = "axial"
     
-    #Get segmentation path
-    seg_path = os.path.join(segmentation_root,segmentation_folder)
     
-    seg_path = os.path.abspath(seg_path)
-    
-    #Support long paths
-    if os.name == "nt":
-        if seg_path.startswith(u"\\\\"):
-            seg_path = u"\\\\?\\UNC\\" + seg_path[2:]
-        else:
-            seg_path = u"\\\\?\\" + seg_path
-    seg_file = os.listdir(seg_path)[0]
     
     #Get slices of volume occupied by segmentation (tumor)
     occupied_slices = get_occupied_slices(os.path.join(segmentation_root,segmentation_folder,seg_file), dicom_slices, direction)

@@ -84,7 +84,8 @@ def load_single_volume(folder_path):
                 
                 # Append the DICOM slice to the list (to access metadata like ImagePositionPatient)
                 dicom_slices.append(img_dcm_std)
-                
+    if not hasattr(img_dcm_std, 'ImageOrientationPatient'):
+        return None, None, None, None           
     if img_dcm_std.ImageOrientationPatient == [0, 1, 0, 0, 0, -1]:
         direction = "sagittal"
     elif img_dcm_std.ImageOrientationPatient == [1, 0, 0, 0, 0, -1]: 
