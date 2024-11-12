@@ -15,14 +15,14 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'  
+        python-version: '3.9'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pytest
-        
+
     - name: Run Pytest
       run: |
-        cd tests/ 
+        cd tests/
         pytest test_data.py
