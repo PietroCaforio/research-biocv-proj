@@ -22,7 +22,7 @@ else:
 def setup_logging():
     """Sets up the logging configuration."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_filename = f"processing_log_{timestamp}.log"
+    log_filename = f"./logs/processing_log_{timestamp}.log"
     logging.basicConfig(
         filename=log_filename,
         level=logging.DEBUG,
@@ -63,7 +63,7 @@ def thread(params):
     target_depths = {"G1":66, "G2":66, "G3":66}
     
     #Track progress
-    done_set = set(Path(f"./progress{args.dataset}.txt").read_text().splitlines())
+    done_set = set(Path(f"./progress/progress{args.dataset}.txt").read_text().splitlines())
     
     #print("Processing:",row["index"], "...")
     
@@ -181,7 +181,7 @@ def thread(params):
         i += 1
     os.makedirs(os.path.join(output_path,patient_id), exist_ok = True)
     np.save(os.path.join(output_path,patient_id,'%s.npy'% i), vol[occupied_slices])
-    with open(f"progress{args.dataset}.txt","a") as progress_file:
+    with open(f"./progress/progress{args.dataset}.txt","a") as progress_file:
         progress_file.write(row["File Location"]+"\n")
     
     logging.info(f"Successfully processed patient {patient_id}")

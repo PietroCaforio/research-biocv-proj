@@ -15,7 +15,7 @@ from util.data_util import *
 def setup_logging():
     """Sets up the logging configuration."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_filename = f"setup_wsi_log_{timestamp}.log"
+    log_filename = f"./logs/setup_wsi_log_{timestamp}.log"
     logging.basicConfig(
         filename=log_filename,
         level=logging.DEBUG,
