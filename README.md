@@ -1,4 +1,4 @@
-# Multidisciplinary Project: Multimodality Biomedical Computervision
+# MSc Thesis on Multimodal Biomedical Computervision Cancer Grading
 
 ## Preprocessed Datasets
 
