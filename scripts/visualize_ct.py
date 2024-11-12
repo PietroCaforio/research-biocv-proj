@@ -1,8 +1,10 @@
-import numpy as np
-from mayavi import mlab
 import argparse
 import os
 import random
+
+import numpy as np
+from mayavi import mlab
+
 
 def choose_random_file(folder_path):
     # List to store all file paths
@@ -22,13 +24,14 @@ def choose_random_file(folder_path):
     random_file = random.choice(all_files)
     return random_file
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--folder_path", type = str, default="../data/processed/CT/") 
+    parser.add_argument("--folder_path", type=str, default="../data/processed/CT/")
     args = parser.parse_args()
-    
+
     # Visualize the 3D volume
     ct_scan = np.load(choose_random_file(args.folder_path))
     mlab.contour3d(ct_scan)
-    
-    mlab.show()    
+
+    mlab.show()
