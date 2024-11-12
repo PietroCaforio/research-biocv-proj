@@ -6,7 +6,7 @@ from pathlib import Path
 
 def test_splits():
 
-    data_root = "../data/"
+    data_root = "../data/processed"
     data_folders = os.listdir(data_root)
     processed_dirs = [
         folder
