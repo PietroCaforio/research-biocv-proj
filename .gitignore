@@ -15,3 +15,4 @@
 !*.sh
 !*.yml
 !*.yaml
+!Makefile
