@@ -1,0 +1,1 @@
+python setup_wsi.py --raw_path ../../CLAM/CPTAC_PDA/ --patch_path ../../CLAM/CPTAC_PDA_PATCH/patches/ --destination ../data/processed/processed_CPTAC_PDA_77_3D/WSI/ --patients ../data/processed/processed_CPTAC_PDA_77_3D/all.txt 
