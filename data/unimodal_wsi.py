@@ -134,7 +134,7 @@ def sanity_check_dataset():
         ], p=0.5),  # Only apply the above transformations with a probability of 0.5
     ])
     # Instantiate the dataset
-    dataset = UnimodalWSIDataset(split='all', dataset_path =  "data/processed_CPTAC_PDA_77_3D", transform = None)
+    dataset = UnimodalWSIDataset(split='all', dataset_path =  "data/processed/processed_CPTAC_PDA_77_3D", transform = None)
 
     # Create a WeightedRandomSampler using the calculated weights
     sampler = WeightedRandomSampler(weights=dataset.weights, num_samples=len(dataset.weights), replacement=True)
