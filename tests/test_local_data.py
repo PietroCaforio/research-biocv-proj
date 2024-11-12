@@ -1,43 +1,60 @@
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
+from random import randint
+
 import pytest
+import torch
+from torch.utils.data import DataLoader
 
 
-sys.path.insert(0, '../')
-from data.unimodal import *
-from data.unimodal3D import *
+sys.path.insert(0, "../")  # noqa: E402
+from data.unimodal import UnimodalCTDataset  # noqa: E402
+from data.unimodal3D import UnimodalCTDataset3D  # noqa: E402
 
 
 # Sanity check of preprocessing
 def test_splits():
     data_root = "../data/"
     data_folders = os.listdir(data_root)
-    processed_dirs = [folder for folder in data_folders if folder.startswith("processed") and os.path.isdir(os.path.join(data_root, folder))]
+    processed_dirs = [
+        folder
+        for folder in data_folders
+        if folder.startswith("processed")
+        and os.path.isdir(os.path.join(data_root, folder))
+    ]
     for processed in processed_dirs:
         files = os.listdir(os.path.join(data_root, processed))
         # Check that right files are in the directories
         assert "labels.txt" in files
         assert "train.txt" in files
         assert "val.txt" in files
-        #assert "CT" in files
-        #assert "WSI" in files
-        
-        train = Path(os.path.join(data_root, processed, "train.txt")).read_text().splitlines()        
-        val = Path(os.path.join(data_root, processed, "val.txt")).read_text().splitlines()
-        # Check that the number of entries in the files is equal to the number of patients actually present in the dataset
-        #assert len(os.listdir(os.path.join(data_root, processed, "CT"))) == len(train) + len(val)
+        # assert "CT" in files
+        # assert "WSI" in files
+
+        train = (
+            Path(os.path.join(data_root, processed, "train.txt"))
+            .read_text()
+            .splitlines()
+        )
+        val = (
+            Path(os.path.join(data_root, processed, "val.txt")).read_text().splitlines()
+        )
         # Check that train and validation don't intersect
         assert len(set(train) & set(val)) == 0
-    
+
+
 # Parametrized test for UnimodalCTDataset
-@pytest.mark.parametrize("unimodal", [
-    UnimodalCTDataset(split="all", dataset_path="../data/processed"),
-    UnimodalCTDataset(split="val", dataset_path="../data/processed"),
-    UnimodalCTDataset(split="train", dataset_path="../data/processed"),
-    UnimodalCTDataset(split="val", dataset_path="../data/processed_oversampling"),
-    UnimodalCTDataset(split="train", dataset_path="../data/processed_oversampling"),
-])
+@pytest.mark.parametrize(
+    "unimodal",
+    [
+        UnimodalCTDataset(split="all", dataset_path="../data/processed"),
+        UnimodalCTDataset(split="val", dataset_path="../data/processed"),
+        UnimodalCTDataset(split="train", dataset_path="../data/processed"),
+        UnimodalCTDataset(split="val", dataset_path="../data/processed_oversampling"),
+        UnimodalCTDataset(split="train", dataset_path="../data/processed_oversampling"),
+    ],
+)
 def test_unimodal_dataset(unimodal):  # Updated the function name to avoid confusion
     dataset = unimodal
     # Check stats of dataset
@@ -47,7 +64,7 @@ def test_unimodal_dataset(unimodal):  # Updated the function name to avoid confu
     for i in range(3):
         min = 0
         max = len(dataset)
-        item = dataset[randint(min, max-1)]  # Fixed index access: max-1
+        dataset[randint(min, max - 1)]  # Fixed index access: max-1
 
     # DataLoader check
     dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
@@ -63,16 +80,21 @@ def test_unimodal_dataset(unimodal):  # Updated the function name to avoid confu
     # Move batch to device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataset.move_batch_to_device(batch, device)
-    
+
 
 # Parametrized test for UnimodalCTDataset3D
-@pytest.mark.parametrize("unimodal3D", [
-    UnimodalCTDataset3D(split="all", dataset_path="../data/processed"),
-    UnimodalCTDataset3D(split="val", dataset_path="../data/processed"),
-    UnimodalCTDataset3D(split="train", dataset_path="../data/processed"),
-    UnimodalCTDataset3D(split="val", dataset_path="../data/processed_oversampling"),
-    UnimodalCTDataset3D(split="train", dataset_path="../data/processed_oversampling"),
-])
+@pytest.mark.parametrize(
+    "unimodal3D",
+    [
+        UnimodalCTDataset3D(split="all", dataset_path="../data/processed"),
+        UnimodalCTDataset3D(split="val", dataset_path="../data/processed"),
+        UnimodalCTDataset3D(split="train", dataset_path="../data/processed"),
+        UnimodalCTDataset3D(split="val", dataset_path="../data/processed_oversampling"),
+        UnimodalCTDataset3D(
+            split="train", dataset_path="../data/processed_oversampling"
+        ),
+    ],
+)
 def test_unimodal3D_dataset(unimodal3D):  # Updated the function name to avoid confusion
     dataset = unimodal3D
     # Check stats of dataset
@@ -82,7 +104,7 @@ def test_unimodal3D_dataset(unimodal3D):  # Updated the function name to avoid c
     for i in range(3):
         min = 0
         max = len(dataset)
-        item = dataset[randint(min, max-1)]  # Fixed index access: max-1
+        dataset[randint(min, max - 1)]  # Fixed index access: max-1
 
     # DataLoader check
     dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
@@ -97,4 +119,3 @@ def test_unimodal3D_dataset(unimodal3D):  # Updated the function name to avoid c
     # Move batch to device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataset.move_batch_to_device(batch, device)
-
