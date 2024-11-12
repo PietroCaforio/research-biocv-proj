@@ -1,5 +1,3 @@
-# TODO: Implement 2 classes one for CT Modality and one for the WSI modality
-
 from pathlib import Path
 import os
 import numpy as np
