@@ -16,3 +16,4 @@
 !*.yml
 !*.yaml
 !Makefile
+!*.tcia

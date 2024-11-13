@@ -1,4 +1,4 @@
-.PHONY: deps
+.PHONY: deps data
 
 deps:
 	@echo "Installing dependencies..."
