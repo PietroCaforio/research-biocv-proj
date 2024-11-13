@@ -1,4 +1,4 @@
-# Multidisciplinary Project: Multimodality Biomedical Computervision
+# MSc Thesis on Multimodal Biomedical Computervision Cancer Grading
 
 ## Preprocessed Datasets
 
@@ -9,9 +9,9 @@
 
 ### Environment Setup
 
-1. Conda is recommended.
-2. In the project folder, run `conda env create -f conda_requirements.yml` to create the environment.
-3. If running on Windows, update the `OPENSLIDE_PATH` in `util/data_util.py` and `scripts/preprocess_parallel.py` to your local Windows openslide binary path.
+1. Conda is required.
+2. run `make deps` to setup the environment and the pre-commit configurations.
+3. If running on Windows, update the `OPENSLIDE_PATH` in `util/data_util.py` and `scripts/preprocess_parallel.py` to your local Windows openslide binary path (This repo is not guaranteed to work on windows).
 
 ### Download Raw Datasets
 
