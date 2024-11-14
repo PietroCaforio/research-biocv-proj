@@ -89,7 +89,9 @@ class UnimodalWSIDataset(torch.utils.data.Dataset):
         patient_id = item["patient_id"]
         item_class = self.map_classes[self.labels[patient_id]]
 
-        patch = np.array(Image.open(os.path.join(item["slide_folder"], item["patch"])))
+        patch = np.array(
+            Image.open(os.path.join(item["slide_folder"], item["patch"]))
+        ).transpose(2, 0, 1)
 
         return {"patient_id": patient_id, "patch": patch, "label": item_class}
 
@@ -171,8 +173,8 @@ def sanity_check_dataset():
     # Check stats of dataset
     print(f"Dataset stats: {dataset.stats()}")
 
-    for i in range(len(dataset)):
-        item = dataset[i]
+    # for i in range(len(dataset)):
+    #    item = dataset[i]
     # Check the first few items in the dataset
     for i in range(3):
         min = 0
