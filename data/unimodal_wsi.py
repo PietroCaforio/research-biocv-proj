@@ -6,8 +6,10 @@ from random import randint
 import numpy as np
 import torch
 from PIL import Image
+from PIL import PngImagePlugin
 from torch.utils.data import DataLoader
 
+PngImagePlugin.MAX_TEXT_CHUNK = 1048576 * 100
 # from torch.utils.data import WeightedRandomSampler
 # from torchvision import transforms
 
@@ -83,7 +85,6 @@ class UnimodalWSIDataset(torch.utils.data.Dataset):
                  "frame", a numpy float32 array representing the CT scan's frame
                  "label", a number in [0, 2] representing the tumor grade
         """
-
         item = self.items[index]
         patient_id = item["patient_id"]
         item_class = self.map_classes[self.labels[patient_id]]
@@ -170,6 +171,8 @@ def sanity_check_dataset():
     # Check stats of dataset
     print(f"Dataset stats: {dataset.stats()}")
 
+    for i in range(len(dataset)):
+        item = dataset[i]
     # Check the first few items in the dataset
     for i in range(3):
         min = 0
