@@ -6,7 +6,7 @@ from random import randint
 import torch
 from PIL import PngImagePlugin
 from torch.utils.data import DataLoader
-from torchvision.io import decode_image
+from torchvision.io import read_image
 
 # import numpy as np
 # from PIL import Image
@@ -94,7 +94,7 @@ class UnimodalWSIDataset(torch.utils.data.Dataset):
         # patch = np.array(
         #    Image.open(os.path.join(item["slide_folder"], item["patch"]))
         # ).transpose(2, 0, 1)
-        patch = decode_image(os.path.join(item["slide_folder"], item["patch"]))
+        patch = read_image(os.path.join(item["slide_folder"], item["patch"]))
 
         return {"patient_id": patient_id, "patch": patch, "label": item_class}
 
