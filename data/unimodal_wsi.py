@@ -3,11 +3,13 @@ import os
 from pathlib import Path
 from random import randint
 
-import numpy as np
 import torch
-from PIL import Image
 from PIL import PngImagePlugin
 from torch.utils.data import DataLoader
+from torchvision.io import decode_image
+
+# import numpy as np
+# from PIL import Image
 
 PngImagePlugin.MAX_TEXT_CHUNK = 1048576 * 100
 # from torch.utils.data import WeightedRandomSampler
@@ -82,16 +84,17 @@ class UnimodalWSIDataset(torch.utils.data.Dataset):
         :param index: index of the dataset sample that will be returned
         :return: a dictionary of data corresponding to the shape with keys:
                  "patient", a string of the patient's name
-                 "frame", a numpy float32 array representing the CT scan's frame
+                 "frame", a torch tensor of the WSI patch
                  "label", a number in [0, 2] representing the tumor grade
         """
         item = self.items[index]
         patient_id = item["patient_id"]
         item_class = self.map_classes[self.labels[patient_id]]
 
-        patch = np.array(
-            Image.open(os.path.join(item["slide_folder"], item["patch"]))
-        ).transpose(2, 0, 1)
+        # patch = np.array(
+        #    Image.open(os.path.join(item["slide_folder"], item["patch"]))
+        # ).transpose(2, 0, 1)
+        patch = decode_image(os.path.join(item["slide_folder"], item["patch"]))
 
         return {"patient_id": patient_id, "patch": patch, "label": item_class}
 
