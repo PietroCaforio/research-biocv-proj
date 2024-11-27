@@ -96,7 +96,12 @@ class UnimodalWSIDataset(torch.utils.data.Dataset):
         # ).transpose(2, 0, 1)
         patch = read_image(os.path.join(item["slide_folder"], item["patch"]))
 
-        return {"patient_id": patient_id, "patch": patch, "label": item_class}
+        return {
+            "patient_id": patient_id,
+            "patch": patch,
+            "label": item_class,
+            "slide": item["slide_folder"],
+        }
 
     def __len__(self):
         """
