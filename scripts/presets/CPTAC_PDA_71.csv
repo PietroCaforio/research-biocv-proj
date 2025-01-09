@@ -1,0 +1,2 @@
+dataset,segmentations,segmentations_metadata,clinical_data_list,root_path,segmentation_root,metadata,validation_patients
+CPTAC_PDA,../data/metadata_annotations/Metadata_Report_CPTAC-PDA_2023_07_14.csv,../data/raw/CPTAC_PDA_77/Segmentations/metadata.csv,../data/metadata_annotations/clinical_annotations.tsv,../data/raw/CPTAC_PDA_77/manifest-1730898715845/CPTAC-PDA/,../data/raw/CPTAC_PDA_77/Segmentations/,../data/raw/CPTAC_PDA_77/manifest-1730898715845/metadata.csv,../data/processed/processed_oversampling/val.txt
