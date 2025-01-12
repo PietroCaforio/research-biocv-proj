@@ -128,7 +128,13 @@ class fusion_layer(nn.Module):
 
 class DPENet(nn.Module):
     def __init__(
-        self, input_dim=256, inter_dim=64, topk_pos=3, topk_neg=3, mixer_channels=2
+        self,
+        input_dim=256,
+        inter_dim=64,
+        topk_pos=3,
+        topk_neg=3,
+        mixer_channels=2,
+        num_classes=3,
     ):
         # segm_dim=(64, 64), mixer_channels=2, topk_pos=3, topk_neg=3
         super().__init__()
@@ -162,6 +168,16 @@ class DPENet(nn.Module):
         self.topk_pos = topk_pos
         self.topk_neg = topk_neg
 
+        # Classification head layers
+        self.conv3d_1 = conv3D(inter_dim, 128, kernel_size=3, stride=2, padding=1)
+        self.conv3d_2 = conv3D(128, 256, kernel_size=3, stride=2, padding=1)
+
+        # Global Average Pooling
+        self.global_avg_pool = nn.AdaptiveAvgPool3d((1, 1, 1))
+
+        # Fully Connected Layers
+        self.fc = nn.Linear(256, num_classes)
+
     #   mask_train, test_dist=None, feat_ups=None, up_masks=None, segm_update_flag=False):
     def forward(self, feat_rad, feat_histo):
 
@@ -189,9 +205,15 @@ class DPENet(nn.Module):
             self.att_conv1(self.att_conv0(feat_histo[3])),
             out.sigmoid(),
         )
-        print(f_att)
+        print(f_att.size())
 
-        # Classification (net that, given the fused features performs classification prediction)
+        # Classification net
+        out = self.conv3d_1(f_att)  # [bsize, 128, depth/2, h/2, w/2]
+        out = self.conv3d_2(out)  # [bsize, 256, depth/4, h/4, w/4]
+        out = self.global_avg_pool(out)  # [bsize, 256, 1, 1, 1]
+        out = torch.flatten(out, 1)  # [bsize, 256]
+        out = self.fc(out)  # [bsize, num_classes]
+        return out
 
     # correlation operation
     def correlation(self, f_rad, f_histo):

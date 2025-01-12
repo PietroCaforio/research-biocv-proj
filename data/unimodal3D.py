@@ -151,7 +151,7 @@ class UnimodalCTDataset3D(torch.utils.data.Dataset):
 def sanity_check_dataset():
     # Instantiate the dataset
     dataset = UnimodalCTDataset3D(
-        split="val", dataset_path="data/processed/processed_CPTAC_PDA_71_3D"
+        split="all", dataset_path="data/processed/processed_CPTAC_PDA_71_3D"
     )
     print(dataset.calculate_weights()[:10])
 

@@ -10,8 +10,6 @@ from data.unimodal3D import UnimodalCTDataset3D  # noqa: E402
 from data.unimodal_wsi3D import UnimodalWSIDataset3D  # noqa: E402
 from torch.utils.data import DataLoader  # noqa: E402
 
-# TODO: importare dpe
-
 
 class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
     """Classification network module"""
@@ -60,7 +58,7 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
         rad_feat = [feat for feat in rad_feat.values()]
         histo_feat = [feat for feat in histo_feat.values()]
         class_prediction = self.class_predictor(rad_feat, histo_feat)
-        print(class_prediction.size())
+        print(class_prediction)
         # train_feat_segm = [feat for feat in train_feat.values()]
         # test_feat_segm = [feat for feat in test_feat.values()]
         # train_masks = [train_masks]
