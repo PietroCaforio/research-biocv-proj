@@ -110,7 +110,19 @@ class UnimodalWSIDataset(torch.utils.data.Dataset):
         return len(self.items)
 
     def stats(self):
-        return {"length": len(self.items), "class_frequency": self.classfreq}
+        wsi_per_patient = {}
+        # patch_counts = {}
+
+        for item in self.items:
+
+            if item["patient_id"] not in wsi_per_patient:
+                wsi_per_patient[item["patient_id"]] = set()
+            wsi_per_patient[item["patient_id"]].add(item["slide_folder"])
+        return {
+            "total_patients": len(wsi_per_patient),
+            "length": len(self.items),
+            "class_frequency": self.classfreq,
+        }
 
     @staticmethod
     def move_batch_to_device(batch, device):
@@ -212,3 +224,11 @@ def sanity_check_dataset():
 
 if __name__ == "__main__":
     sanity_check_dataset()
+# C3L-02888
+# C3L-03348
+# C3L-03622
+# C3L-03629
+# C3N-01716 -> lui c'é ma è problematico e quindi nel dataset processato
+#             non apparirà alla fine
+# Mancano dal dataset di WSI di CPTAC-PDA per cui CPTAC-PDA-71 in realtà
+# sarà di 66 pazienti nel caso multimodale
