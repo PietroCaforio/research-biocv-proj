@@ -111,7 +111,10 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
 #
 
 # TODO: @model_constructor
-def madpe_resnet34(backbone_pretrained=True):
+def madpe_resnet34(
+    backbone_pretrained=True,
+    check_point_path="./models/pretrain_weights/r3d34_K_200ep.pth",
+):
     # radiology backbone
     rad_backbone_net = resnet3D.generate_model(34, n_input_channels=3, n_classes=700)
     histo_backbone_net = resnet3D.generate_model(34, n_input_channels=3, n_classes=700)
@@ -119,7 +122,7 @@ def madpe_resnet34(backbone_pretrained=True):
         # !conda install -y gdown
         # !gdown --id 1fFN5J2He6eTqMPRl_M9gFtFfpUmhtQc9
         pretrain = torch.load(
-            "./models/pretrain_weights/r3d34_K_200ep.pth",
+            check_point_path,
             map_location="cpu",
             weights_only=True,
         )
