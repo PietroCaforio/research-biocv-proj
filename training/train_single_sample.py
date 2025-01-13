@@ -6,8 +6,7 @@ import torch  # noqa E402
 import torch.nn as nn  # noqa E402
 import torch.optim as optim  # noqa E402
 from torch.utils.data import DataLoader  # noqa E402
-from data.unimodal3D import UnimodalCTDataset3D  # noqa E402
-from data.unimodal_wsi3D import UnimodalWSIDataset3D  # noqa E402
+from data.multimodal3D import MultimodalCTWSIDataset  # noqa E402
 from models.dpe.main_model import madpe_resnet34  # noqa E402
 import numpy as np  # noqa E402
 from pathlib import Path  # noqa E402
@@ -16,10 +15,8 @@ import matplotlib.pyplot as plt  # noqa E402
 
 def train_single_sample(
     model,
-    train_ct_loader,
-    train_wsi_loader,
-    val_ct_loader,
-    val_wsi_loader,
+    train_loader,
+    val_loader,
     device,
     num_epochs=100,
     learning_rate=0.001,
@@ -34,39 +31,32 @@ def train_single_sample(
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # Get single training sample
-    train_ct = next(iter(train_ct_loader))
-    train_wsi = next(iter(train_wsi_loader))
+    train_sample = next(iter(train_loader))
 
     # Get single validation sample
-    val_ct = next(iter(val_ct_loader))
-    val_wsi = next(iter(val_wsi_loader))
-
-    # Ensure we have matching patient IDs
-    assert (
-        train_ct["patient_id"] == train_wsi["patient_id"]
-    ), "Training samples don't match"
-    assert (
-        val_ct["patient_id"] == val_wsi["patient_id"]
-    ), "Validation samples don't match"
+    # val_sample = train_sample.copy()
 
     # Convert to appropriate format and move to device
     train_ct_vol = (
-        train_ct["volume"].float().unsqueeze(1).repeat(1, 3, 1, 1, 1).to(device)
+        train_sample["ct_volume"].float().unsqueeze(1).repeat(1, 3, 1, 1, 1).to(device)
     )
-    train_wsi_vol = train_wsi["volume"].float().to(device)
-    train_label = train_ct["label"].to(device)
+    train_wsi_vol = train_sample["wsi_volume"].float().to(device)
+    train_label = train_sample["label"].to(device)
 
-    val_ct_vol = val_ct["volume"].float().unsqueeze(1).repeat(1, 3, 1, 1, 1).to(device)
-    val_wsi_vol = val_wsi["volume"].float().to(device)
-    val_label = val_ct["label"].to(device)
+    val_ct_vol = (
+        train_sample["ct_volume"].float().unsqueeze(1).repeat(1, 3, 1, 1, 1).to(device)
+    )
+    val_wsi_vol = train_sample["wsi_volume"].float().to(device)
+    print(val_wsi_vol.size())
+    val_label = train_sample["label"].to(device)
 
     # Training history
     train_losses = []
     val_losses = []
     best_val_loss = float("inf")
 
-    print(f"Training on patient: {train_ct['patient_id'][0]}")
-    print(f"Validating on patient: {val_ct['patient_id'][0]}")
+    print(f"Training on patient: {train_sample['patient_id'][0]}")
+    print(f"Validating on patient: {train_sample['patient_id'][0]}")
 
     for epoch in range(num_epochs):
         # Training step
@@ -137,41 +127,28 @@ if __name__ == "__main__":
     madpe = madpe_resnet34()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     madpe.to(device)
-
-    # Initialize datasets
-    train_ct_dataset = UnimodalCTDataset3D(
-        split="train", dataset_path="./data/processed/processed_CPTAC_PDA_71_3D"
-    )
-    train_wsi_dataset = UnimodalWSIDataset3D(
+    train_multimode_dataset = MultimodalCTWSIDataset(
         split="train",
         dataset_path="./data/processed/processed_CPTAC_PDA_71_3D",
         patches_per_wsi=66,
         sampling_strategy="consecutive",
-    )
-
-    val_ct_dataset = UnimodalCTDataset3D(
-        split="val", dataset_path="./data/processed/processed_CPTAC_PDA_71_3D"
-    )
-    val_wsi_dataset = UnimodalWSIDataset3D(
-        split="val",
-        dataset_path="./data/processed/processed_CPTAC_PDA_71_3D",
-        patches_per_wsi=66,
-        sampling_strategy="consecutive",
+        missing_modality_prob=0.0,
     )
 
     # Create dataloaders
-    train_ct_loader = DataLoader(train_ct_dataset, batch_size=1, shuffle=True)
-    train_wsi_loader = DataLoader(train_wsi_dataset, batch_size=1, shuffle=True)
-    val_ct_loader = DataLoader(val_ct_dataset, batch_size=1, shuffle=True)
-    val_wsi_loader = DataLoader(val_wsi_dataset, batch_size=1, shuffle=True)
+    # We use the same sample for train and validation
+    train_multimode_loader = DataLoader(
+        train_multimode_dataset, batch_size=1, shuffle=False
+    )
+    val_multimode_loader = DataLoader(
+        train_multimode_dataset, batch_size=1, shuffle=False
+    )
 
     # Train the model
     train_losses, val_losses = train_single_sample(
         model=madpe,
-        train_ct_loader=train_ct_loader,
-        train_wsi_loader=train_wsi_loader,
-        val_ct_loader=val_ct_loader,
-        val_wsi_loader=val_wsi_loader,
+        train_loader=train_multimode_loader,
+        val_loader=val_multimode_loader,
         device=device,
         num_epochs=100,
         learning_rate=0.001,

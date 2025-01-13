@@ -188,8 +188,6 @@ class MultimodalCTWSIDataset(Dataset):
             if f.endswith((".png", ".jpg", ".jpeg"))
         )
 
-        if len(patch_files) == 0:
-            print("CI SIAMO")
         # Sample patches according to strategy
         if len(patch_files) <= self.patches_per_wsi:
 
@@ -211,7 +209,7 @@ class MultimodalCTWSIDataset(Dataset):
             img_tensor = read_image(patch_path)
             patches.append(img_tensor)
 
-        return torch.stack(patches, dim=0)
+        return torch.stack(patches, dim=1)
 
     def _get_empty_ct_volume(self):
         """Return empty CT volume of correct shape"""
@@ -219,7 +217,7 @@ class MultimodalCTWSIDataset(Dataset):
 
     def _get_empty_wsi_volume(self):
         """Return empty WSI volume of correct shape"""
-        return torch.zeros((self.patches_per_wsi, 3, 224, 224))
+        return torch.zeros((3, self.patches_per_wsi, 224, 224))
 
     def __getitem__(self, index):
         """
