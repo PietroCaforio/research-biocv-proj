@@ -184,13 +184,13 @@ class DPENet(nn.Module):
         f_rad = self.cor_conv1(self.cor_conv0(feat_rad[3]))
         f_histo = self.cor_conv1(self.cor_conv0(feat_histo[3]))
 
-        print(f_rad.size())
-        print(f_histo.size())
+        # print(f_rad.size())
+        # print(f_histo.size())
 
         pred_pos, pred_neg = self.correlation(f_rad, f_histo)
 
-        print(pred_pos.size())
-        print(pred_neg.size())
+        # print(pred_pos.size())
+        # print(pred_neg.size())
 
         class_layers = torch.cat(
             (torch.unsqueeze(pred_pos, dim=1), torch.unsqueeze(pred_neg, dim=1)), dim=1
@@ -198,14 +198,14 @@ class DPENet(nn.Module):
 
         # Pass through mixers to create position-aware features
         out = self.mixer1(self.mixer0(class_layers))
-        print("out:", out.size())
+        # print("out:", out.size())
         # Attention-based fusion for classification
         f_att = self.fusion(
             self.att_conv1(self.att_conv0(feat_rad[3])),
             self.att_conv1(self.att_conv0(feat_histo[3])),
             out.sigmoid(),
         )
-        print(f_att.size())
+        # print(f_att.size())
 
         # Classification net
         out = self.conv3d_1(f_att)  # [bsize, 128, depth/2, h/2, w/2]

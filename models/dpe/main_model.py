@@ -53,12 +53,12 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
 
         rad_feat = self.extract_rad_backbone_features(rad_vols)
         histo_feat = self.extract_histo_backbone_features(histo_vols)
-        print(rad_feat["layer3"].size())
-        print(histo_feat["layer3"].size())
+        # print(rad_feat["layer3"].size())
+        # print(histo_feat["layer3"].size())
         rad_feat = [feat for feat in rad_feat.values()]
         histo_feat = [feat for feat in histo_feat.values()]
         class_prediction = self.class_predictor(rad_feat, histo_feat)
-        print(class_prediction)
+        # print(class_prediction)
         # train_feat_segm = [feat for feat in train_feat.values()]
         # test_feat_segm = [feat for feat in test_feat.values()]
         # train_masks = [train_masks]
@@ -70,6 +70,7 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
         # segm_pred = self.segm_predictor(test_feat_segm, train_feat_segm,
         # train_masks, test_dist)
         # return segm_pred
+        return class_prediction
 
     def extract_rad_backbone_features(self, vol, layers=None):
         if layers is None:
