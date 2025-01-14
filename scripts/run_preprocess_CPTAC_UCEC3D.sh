@@ -1,1 +1,0 @@
-python preprocess_parallel.py --dataset CPTAC_UCEC --destination ../data/processed_CPTACUCEC_3D_pad/CT/ --fix_depth 131 

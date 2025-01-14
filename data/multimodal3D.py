@@ -307,6 +307,7 @@ def test_multimodal_dataset():
         patches_per_wsi=66,
         sampling_strategy="consecutive",
         missing_modality_prob=0.2,  # 20% chance of each modality being missing
+        require_both_modalities=True,
     )
 
     # Print dataset stats
