@@ -129,11 +129,7 @@ class fusion_layer(nn.Module):
 class PositionalEmbedding(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.mlp = nn.Sequential(
-            nn.Linear(in_channels, out_channels),
-            nn.ReLU(),
-            nn.Linear(out_channels, out_channels),
-        )
+        self.mlp = nn.Sequential(nn.Linear(in_channels, out_channels))
         # Learnable token for missing modality
         self.missing_modality_token = nn.Parameter(torch.zeros(1, out_channels))
 
