@@ -238,8 +238,8 @@ class DPENet(nn.Module):
         # Positional Embedding network for modality awareness
         flattened_dim = 2 * math.ceil(vol_depth / 8) * math.ceil(vol_wh / 16) ** 2
         flattened_dim_out = 64 * math.ceil(vol_depth / 8) * math.ceil(vol_wh / 16) ** 2
-        print("flattened_dim:", flattened_dim)
-        print("dimensions:", math.ceil(vol_depth / 8), math.ceil(vol_wh / 16))
+        # print("flattened_dim:", flattened_dim)
+        # print("dimensions:", math.ceil(vol_depth / 8), math.ceil(vol_wh / 16))
         self.positional_embedding = PositionalEmbedding(
             flattened_dim, flattened_dim_out
         )
@@ -262,8 +262,7 @@ class DPENet(nn.Module):
         batch_size = rad_mask.shape[0]
         f_rad_present = self.cor_conv1(self.cor_conv0(feat_rad[3]))
         f_histo_present = self.cor_conv1(self.cor_conv0(feat_histo[3]))
-        print(f_rad_present.size())
-        print(f_histo_present.size())
+
         f_rad = torch.empty(
             batch_size,
             f_rad_present.shape[1],
@@ -278,8 +277,6 @@ class DPENet(nn.Module):
             f_histo_present.shape[3],
             f_histo_present.shape[4],
         ).to(self.missing_histo_token.device)
-        print("f_rad:", f_rad.size())
-        print("f_histo:", f_histo.size())
 
         f_rad[rad_mask] = f_rad_present
         f_histo[histo_mask] = f_histo_present
@@ -288,25 +285,19 @@ class DPENet(nn.Module):
         f_histo[~histo_mask] = self.missing_histo_token.repeat(
             (~histo_mask).sum(), 1, 1, 1, 1
         )
-        print("f_rad:", f_rad.size())
-        print("f_histo:", f_histo.size())
 
         # compute similarity maps
         pred_pos, pred_neg = self.correlation(f_rad, f_histo)
-
-        print(pred_neg.size())
-        print(pred_pos.size())
 
         # concatenate maps
         class_layers = torch.cat(
             (torch.unsqueeze(pred_pos, dim=1), torch.unsqueeze(pred_neg, dim=1)), dim=1
         )
 
-        print("class_layers size:", class_layers.size())
         modality_flags = ~torch.min(
             rad_mask, histo_mask
         )  # 1 when sample contains missing modality
-        print(modality_flags)
+
         pe = self.positional_embedding(class_layers, modality_flags)
 
         # print("out:", out.size())
@@ -342,15 +333,12 @@ class DPENet(nn.Module):
             (~histo_mask).sum(), 1, 1, 1, 1
         )
 
-        print("pe size:", pe.size())
-        print("rad_tokens size:", rad_tokens.size())
         # Attention-based fusion for classification
         f_att = self.fusion(
             rad_tokens,
             histo_tokens,
             pe.sigmoid(),
         )
-        print(f_att.size())
         #
         # Classification net
         out = self.conv3d_1(f_att)  # [bsize, 128, depth/2, h/2, w/2]

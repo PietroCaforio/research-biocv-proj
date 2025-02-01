@@ -60,17 +60,13 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
         #    histo_vols.shape[0] if histo_vols is not None else 0,
         # )
 
-        rad_mask = modality_flag[:, 0].bool().to(modality_flag.device)
-        histo_mask = modality_flag[:, 1].bool().to(modality_flag.device)
-        print(rad_mask)
-        print(histo_mask)
+        rad_mask = modality_flag[:, 0].bool().to(rad_vols.device)
+        histo_mask = modality_flag[:, 1].bool().to(histo_vols.device)
         # extract backbone features only for available modalities
         rad_feat = self.extract_rad_backbone_features(rad_vols[rad_mask])
         rad_feat = [feat for feat in rad_feat.values()]
         histo_feat = self.extract_histo_backbone_features(histo_vols[histo_mask])
         histo_feat = [feat for feat in histo_feat.values()]
-        print(rad_feat[3].size())
-        print(histo_feat[3].size())
 
         # if modality_flag.data[0].item() < 1.: # radiology missing
         #    rad_feat = None
