@@ -59,6 +59,7 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
         #    rad_vols.shape[0] if rad_vols is not None else 0,
         #    histo_vols.shape[0] if histo_vols is not None else 0,
         # )
+        device = self.device()
         rad_mask = modality_flag[:, 0].bool().to(device)
         histo_mask = modality_flag[:, 1].bool().to(device)
         print(rad_mask)

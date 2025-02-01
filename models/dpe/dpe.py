@@ -188,8 +188,8 @@ class DPENet(nn.Module):
         # self.att_conv2 = conv(segm_inter_dim[3], segm_inter_dim[3])
         # self.att_conv3 = conv_no_relu(segm_inter_dim[3], segm_inter_dim[3])
 
-        self.mixer0 = conv3D(mixer_channels, inter_dim)  # DPE-Net
-        self.mixer1 = conv_no_relu3D(inter_dim, inter_dim)
+        # self.mixer0 = conv3D(mixer_channels, inter_dim)  # DPE-Net
+        # self.mixer1 = conv_no_relu3D(inter_dim, inter_dim)
 
         # Init weights with He initialization
         for m in self.modules():
