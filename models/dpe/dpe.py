@@ -126,6 +126,45 @@ class fusion_layer(nn.Module):
         return f22.permute(0, 2, 1).contiguous().view(bsz, chl, z, wh, wh)
 
 
+class PositionalEmbedding(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.mlp = nn.Sequential(
+            nn.Linear(in_channels, out_channels),
+            nn.ReLU(),
+            nn.Linear(out_channels, out_channels),
+        )
+        # Learnable token for missing modality
+        self.missing_modality_token = nn.Parameter(torch.zeros(1, out_channels))
+
+    def forward(self, pos_input, modality_flags):
+        """
+        Args:
+            pos_input (torch.Tensor): Input feature to generate positional embedding [B, C, H, W].
+            modality_flag (torch.Tensor): Flag indicating if a modality is missing (1 if missing, 0 if present)
+        Returns:
+            torch.Tensor: Adjusted positional embedding [B, C, H, W].
+        """
+        # Flatten input for MLP
+        pos_input_flat = pos_input.view(pos_input.size(0), -1)
+        print("flattened_dim:", pos_input_flat.size())
+        pos_embedding = self.mlp(pos_input_flat)
+        print("pos_embedding_size", pos_embedding.size())
+        # Adjust positional embedding with the missing modality token
+        adjusted_embedding = (
+            pos_embedding + self.missing_modality_token * modality_flags.unsqueeze(1)
+        )
+
+        # Reshape back to spatial dimensions
+        return adjusted_embedding.view(
+            pos_input.size(0),
+            -1,
+            pos_input.size(2),
+            pos_input.size(3),
+            pos_input.size(4),
+        )
+
+
 class DPENet(nn.Module):
     def __init__(
         self,
@@ -135,6 +174,8 @@ class DPENet(nn.Module):
         topk_neg=3,
         mixer_channels=2,
         num_classes=3,
+        vol_depth=66,
+        vol_wh=224,
     ):
         # segm_dim=(64, 64), mixer_channels=2, topk_pos=3, topk_neg=3
         super().__init__()
@@ -178,35 +219,143 @@ class DPENet(nn.Module):
         # Fully Connected Layers
         self.fc = nn.Linear(256, num_classes)
 
+        # Learnable missing modality's tokens for correlation map
+        self.missing_rad_token = nn.Parameter(
+            torch.randn(
+                1,
+                inter_dim,
+                math.ceil(vol_depth / 8),
+                math.ceil(vol_wh / 16),
+                math.ceil(vol_wh / 16),
+            )
+        )
+        self.missing_histo_token = nn.Parameter(
+            torch.randn(
+                1,
+                inter_dim,
+                math.ceil(vol_depth / 8),
+                math.ceil(vol_wh / 16),
+                math.ceil(vol_wh / 16),
+            )
+        )
+
+        # Positional Embedding network for modality awareness
+        flattened_dim = 2 * math.ceil(vol_depth / 8) * math.ceil(vol_wh / 16) ** 2
+        flattened_dim_out = 64 * math.ceil(vol_depth / 8) * math.ceil(vol_wh / 16) ** 2
+        print("flattened_dim:", flattened_dim)
+        print("dimensions:", math.ceil(vol_depth / 8), math.ceil(vol_wh / 16))
+        self.positional_embedding = PositionalEmbedding(
+            flattened_dim, flattened_dim_out
+        )
+
     #   mask_train, test_dist=None, feat_ups=None, up_masks=None, segm_update_flag=False):
-    def forward(self, feat_rad, feat_histo):
+    def forward(self, feat_rad, feat_histo, rad_mask, histo_mask):
 
-        f_rad = self.cor_conv1(self.cor_conv0(feat_rad[3]))
-        f_histo = self.cor_conv1(self.cor_conv0(feat_histo[3]))
+        # if modality_flag.data[0].item() < 1.: # radiology missing
+        #    modality_flag = torch.tensor(1)
+        #    f_rad = None
+        # else:
+        #    f_rad = self.cor_conv1(self.cor_conv0(feat_rad[3]))
+        #
+        # if modality_flag.data[1].item() < 1.: # histology missing
+        #    print("ci passo")
+        #    modality_flag = torch.tensor(1)
+        #    f_histo = None
+        # else:
+        #    f_histo = self.cor_conv1(self.cor_conv0(feat_histo[3]))
+        batch_size = rad_mask.shape[0]
+        f_rad_present = self.cor_conv1(self.cor_conv0(feat_rad[3]))
+        f_histo_present = self.cor_conv1(self.cor_conv0(feat_histo[3]))
+        print(f_rad_present.size())
+        print(f_histo_present.size())
+        f_rad = torch.empty(
+            batch_size,
+            f_rad_present.shape[1],
+            f_rad_present.shape[2],
+            f_rad_present.shape[3],
+            f_rad_present.shape[4],
+        ).to(self.missing_rad_token.device)
+        f_histo = torch.empty(
+            batch_size,
+            f_histo_present.shape[1],
+            f_histo_present.shape[2],
+            f_histo_present.shape[3],
+            f_histo_present.shape[4],
+        ).to(self.missing_histo_token.device)
+        print("f_rad:", f_rad.size())
+        print("f_histo:", f_histo.size())
 
-        # print(f_rad.size())
-        # print(f_histo.size())
+        f_rad[rad_mask] = f_rad_present
+        f_histo[histo_mask] = f_histo_present
+        # substitute missing tokens with optimizable parameters
+        f_rad[~rad_mask] = self.missing_rad_token.repeat((~rad_mask).sum(), 1, 1, 1, 1)
+        f_histo[~histo_mask] = self.missing_histo_token.repeat(
+            (~histo_mask).sum(), 1, 1, 1, 1
+        )
+        print("f_rad:", f_rad.size())
+        print("f_histo:", f_histo.size())
 
+        # compute similarity maps
         pred_pos, pred_neg = self.correlation(f_rad, f_histo)
 
-        # print(pred_pos.size())
-        # print(pred_neg.size())
+        print(pred_neg.size())
+        print(pred_pos.size())
 
+        # concatenate maps
         class_layers = torch.cat(
             (torch.unsqueeze(pred_pos, dim=1), torch.unsqueeze(pred_neg, dim=1)), dim=1
         )
 
-        # Pass through mixers to create position-aware features
-        out = self.mixer1(self.mixer0(class_layers))
+        print("class_layers size:", class_layers.size())
+        modality_flags = ~torch.min(
+            rad_mask, histo_mask
+        )  # 1 when sample contains missing modality
+        print(modality_flags)
+        pe = self.positional_embedding(class_layers, modality_flags)
+
         # print("out:", out.size())
+        # pe = self.mixer1(self.mixer0(class_layers))
+
+        # Calculate tokens for feature fusion
+        rad_token_pres = self.att_conv1(self.att_conv0(feat_rad[3]))
+        histo_token_pres = self.att_conv1(self.att_conv0(feat_histo[3]))
+
+        rad_tokens = torch.empty(
+            batch_size,
+            f_rad_present.shape[1],
+            f_rad_present.shape[2],
+            f_rad_present.shape[3],
+            f_rad_present.shape[4],
+        ).to(self.missing_rad_token.device)
+        histo_tokens = torch.empty(
+            batch_size,
+            f_histo_present.shape[1],
+            f_histo_present.shape[2],
+            f_histo_present.shape[3],
+            f_histo_present.shape[4],
+        ).to(self.missing_histo_token.device)
+
+        rad_tokens[rad_mask] = rad_token_pres
+        histo_tokens[histo_mask] = histo_token_pres
+        # substitute missing modalities with optimizable missing token parameters
+        # (for now we use the same ones used for pe)
+        rad_tokens[~rad_mask] = self.missing_rad_token.repeat(
+            (~rad_mask).sum(), 1, 1, 1, 1
+        )
+        histo_tokens[~histo_mask] = self.missing_histo_token.repeat(
+            (~histo_mask).sum(), 1, 1, 1, 1
+        )
+
+        print("pe size:", pe.size())
+        print("rad_tokens size:", rad_tokens.size())
         # Attention-based fusion for classification
         f_att = self.fusion(
-            self.att_conv1(self.att_conv0(feat_rad[3])),
-            self.att_conv1(self.att_conv0(feat_histo[3])),
-            out.sigmoid(),
+            rad_tokens,
+            histo_tokens,
+            pe.sigmoid(),
         )
-        # print(f_att.size())
-
+        print(f_att.size())
+        #
         # Classification net
         out = self.conv3d_1(f_att)  # [bsize, 128, depth/2, h/2, w/2]
         out = self.conv3d_2(out)  # [bsize, 256, depth/4, h/4, w/4]
@@ -216,7 +365,8 @@ class DPENet(nn.Module):
         return out
 
     # correlation operation
-    def correlation(self, f_rad, f_histo):
+    def correlation(self, f_rad, f_histo, modality_flag=[1, 1]):
+
         # first normalize train and test features to have L2 norm 1
         # cosine similarity and reshape last two dimensions into one
 

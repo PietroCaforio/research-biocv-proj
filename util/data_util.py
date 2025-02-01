@@ -1,8 +1,8 @@
 import os
 
-from cv2 import cv2
-from numpy import numpy as np
-from pydicom import pydicom as dicom
+import cv2
+import numpy as np
+import pydicom as dicom
 from scipy.ndimage import zoom
 
 if os.name == "nt":
