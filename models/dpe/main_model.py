@@ -55,50 +55,19 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
         test_imgs is thus of the form [sequence, batch, feature, row, col]
         """
 
-        # batch_size = max(
-        #    rad_vols.shape[0] if rad_vols is not None else 0,
-        #    histo_vols.shape[0] if histo_vols is not None else 0,
-        # )
-
         rad_mask = modality_flag[:, 0].bool().to(rad_vols.device)
         histo_mask = modality_flag[:, 1].bool().to(histo_vols.device)
+
         # extract backbone features only for available modalities
         rad_feat = self.extract_rad_backbone_features(rad_vols[rad_mask])
         rad_feat = [feat for feat in rad_feat.values()]
         histo_feat = self.extract_histo_backbone_features(histo_vols[histo_mask])
         histo_feat = [feat for feat in histo_feat.values()]
 
-        # if modality_flag.data[0].item() < 1.: # radiology missing
-        #    rad_feat = None
-        # else:
-        #    rad_feat = self.extract_rad_backbone_features(rad_vols)
-        #    rad_feat = [feat for feat in rad_feat.values()]
-        # if modality_flag.data[1].item() < 1.: # histo missing
-        #    histo_feat = None
-        # else:
-        #    histo_feat = self.extract_histo_backbone_features(histo_vols)
-        #    histo_feat = [feat for feat in histo_feat.values()]
-        # print(rad_feat["layer3"].size())
-        # print(histo_feat["layer3"].size())
-        #
-        # print(rad_feat[3].size())
-        #
         class_prediction = self.class_predictor(
             rad_feat, histo_feat, rad_mask, histo_mask
         )
 
-        # print(class_prediction)
-        # train_feat_segm = [feat for feat in train_feat.values()]
-        # test_feat_segm = [feat for feat in test_feat.values()]
-        # train_masks = [train_masks]
-
-        # if test_dist is not None:
-        #    test_dist = [test_dist]
-
-        # Obtain iou prediction
-        # segm_pred = self.segm_predictor(test_feat_segm, train_feat_segm,
-        # train_masks, test_dist)
-        # return segm_pred
         return class_prediction
 
     def extract_rad_backbone_features(self, vol, layers=None):

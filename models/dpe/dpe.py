@@ -247,19 +247,10 @@ class DPENet(nn.Module):
     #   mask_train, test_dist=None, feat_ups=None, up_masks=None, segm_update_flag=False):
     def forward(self, feat_rad, feat_histo, rad_mask, histo_mask):
 
-        # if modality_flag.data[0].item() < 1.: # radiology missing
-        #    modality_flag = torch.tensor(1)
-        #    f_rad = None
-        # else:
-        #    f_rad = self.cor_conv1(self.cor_conv0(feat_rad[3]))
-        #
-        # if modality_flag.data[1].item() < 1.: # histology missing
-        #    print("ci passo")
-        #    modality_flag = torch.tensor(1)
-        #    f_histo = None
-        # else:
-        #    f_histo = self.cor_conv1(self.cor_conv0(feat_histo[3]))
+        # Project features to token dimensions for positional embeddings
+
         batch_size = rad_mask.shape[0]
+
         f_rad_present = self.cor_conv1(self.cor_conv0(feat_rad[3]))
         f_histo_present = self.cor_conv1(self.cor_conv0(feat_histo[3]))
 
@@ -280,6 +271,7 @@ class DPENet(nn.Module):
 
         f_rad[rad_mask] = f_rad_present
         f_histo[histo_mask] = f_histo_present
+
         # substitute missing tokens with optimizable parameters
         f_rad[~rad_mask] = self.missing_rad_token.repeat((~rad_mask).sum(), 1, 1, 1, 1)
         f_histo[~histo_mask] = self.missing_histo_token.repeat(
@@ -298,12 +290,11 @@ class DPENet(nn.Module):
             rad_mask, histo_mask
         )  # 1 when sample contains missing modality
 
+        # Calculate positional embeddings
+
         pe = self.positional_embedding(class_layers, modality_flags)
 
-        # print("out:", out.size())
-        # pe = self.mixer1(self.mixer0(class_layers))
-
-        # Calculate tokens for feature fusion
+        # Project features againg to tokens for feature fusion
         rad_token_pres = self.att_conv1(self.att_conv0(feat_rad[3]))
         histo_token_pres = self.att_conv1(self.att_conv0(feat_histo[3]))
 
@@ -324,6 +315,7 @@ class DPENet(nn.Module):
 
         rad_tokens[rad_mask] = rad_token_pres
         histo_tokens[histo_mask] = histo_token_pres
+
         # substitute missing modalities with optimizable missing token parameters
         # (for now we use the same ones used for pe)
         rad_tokens[~rad_mask] = self.missing_rad_token.repeat(
@@ -339,7 +331,7 @@ class DPENet(nn.Module):
             histo_tokens,
             pe.sigmoid(),
         )
-        #
+
         # Classification net
         out = self.conv3d_1(f_att)  # [bsize, 128, depth/2, h/2, w/2]
         out = self.conv3d_2(out)  # [bsize, 256, depth/4, h/4, w/4]
