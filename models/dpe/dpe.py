@@ -235,6 +235,26 @@ class DPENet(nn.Module):
             )
         )
 
+        # Learnable missing modality's tokens for fusion
+        self.missing_rad_token_fusion = nn.Parameter(
+            torch.randn(
+                1,
+                inter_dim,
+                math.ceil(vol_depth / 8),
+                math.ceil(vol_wh / 16),
+                math.ceil(vol_wh / 16),
+            )
+        )
+        self.missing_histo_token_fusion = nn.Parameter(
+            torch.randn(
+                1,
+                inter_dim,
+                math.ceil(vol_depth / 8),
+                math.ceil(vol_wh / 16),
+                math.ceil(vol_wh / 16),
+            )
+        )
+
         # Positional Embedding network for modality awareness
         flattened_dim = 2 * math.ceil(vol_depth / 8) * math.ceil(vol_wh / 16) ** 2
         flattened_dim_out = 64 * math.ceil(vol_depth / 8) * math.ceil(vol_wh / 16) ** 2
@@ -318,10 +338,10 @@ class DPENet(nn.Module):
 
         # substitute missing modalities with optimizable missing token parameters
         # (for now we use the same ones used for pe)
-        rad_tokens[~rad_mask] = self.missing_rad_token.repeat(
+        rad_tokens[~rad_mask] = self.missing_rad_token_fusion.repeat(
             (~rad_mask).sum(), 1, 1, 1, 1
         )
-        histo_tokens[~histo_mask] = self.missing_histo_token.repeat(
+        histo_tokens[~histo_mask] = self.missing_histo_token_fusion.repeat(
             (~histo_mask).sum(), 1, 1, 1, 1
         )
 
