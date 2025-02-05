@@ -1,3 +1,4 @@
+import concurrent.futures
 import os
 import random
 from itertools import product
@@ -5,9 +6,9 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from pyvips import Image as VipsImage
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-from torchvision.io import read_image
 
 
 class MultimodalCTWSIDataset(Dataset):
@@ -204,12 +205,30 @@ class MultimodalCTWSIDataset(Dataset):
             ]
 
         # Load selected patches
-        for patch_file in selected_patches:
-            patch_path = os.path.join(self.dataset_path, wsi_folder, patch_file)
-            img_tensor = read_image(patch_path)
-            patches.append(img_tensor)
+        # for patch_file in selected_patches:
+        #     patch_path = os.path.join(self.dataset_path, wsi_folder, patch_file)
+        #     img = cv2.imread(patch_path)
+        #     img_np = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        #     patches.append(img_np)
 
-        return torch.stack(patches, dim=1)
+        # Parallel load
+        # Create the full file paths
+        patch_paths = [
+            os.path.join(self.dataset_path, wsi_folder, patch_file)
+            for patch_file in selected_patches
+        ]
+
+        # Use ThreadPoolExecutor to process the patches in parallel
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            patches = list(executor.map(self._process_patch, patch_paths))
+
+        return np.stack(patches, axis=0).transpose(3, 0, 1, 2)
+
+    def _process_patch(self, patch_path):
+        img = VipsImage.new_from_file(patch_path, access="sequential")
+        img_np = img.numpy()
+        return img_np
 
     def _get_empty_ct_volume(self):
         """Return empty CT volume of correct shape"""
@@ -217,7 +236,7 @@ class MultimodalCTWSIDataset(Dataset):
 
     def _get_empty_wsi_volume(self):
         """Return empty WSI volume of correct shape"""
-        return torch.zeros((3, self.patches_per_wsi, 224, 224))
+        return np.zeros((3, self.patches_per_wsi, 224, 224))
 
     def __getitem__(self, index):
         """
@@ -231,6 +250,7 @@ class MultimodalCTWSIDataset(Dataset):
                 'base_modality_mask': tensor indicating modalities available in dataset
             }
         """
+
         sample = self.samples[index]
         patient_id = sample["patient_id"]
         base_mask = sample["base_modality_mask"]
