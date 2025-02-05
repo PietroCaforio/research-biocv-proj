@@ -4,9 +4,9 @@ import random
 from itertools import product
 from pathlib import Path
 
+import cv2
 import numpy as np
 import torch
-from pyvips import Image as VipsImage
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
@@ -225,9 +225,9 @@ class MultimodalCTWSIDataset(Dataset):
 
         return np.stack(patches, axis=0).transpose(3, 0, 1, 2)
 
-    def _process_patch(self, patch_path):
-        img = VipsImage.new_from_file(patch_path, access="sequential")
-        img_np = img.numpy()
+    def _process_patch(patch_path):
+        img = cv2.imread(patch_path)
+        img_np = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         return img_np
 
     def _get_empty_ct_volume(self):
