@@ -143,9 +143,9 @@ class PositionalEmbedding(nn.Module):
         """
         # Flatten input for MLP
         pos_input_flat = pos_input.view(pos_input.size(0), -1)
-        print("flattened_dim:", pos_input_flat.size())
+        # print("flattened_dim:", pos_input_flat.size())
         pos_embedding = self.mlp(pos_input_flat)
-        print("pos_embedding_size", pos_embedding.size())
+        # print("pos_embedding_size", pos_embedding.size())
         # Adjust positional embedding with the missing modality token
         adjusted_embedding = (
             pos_embedding + self.missing_modality_token * modality_flags.unsqueeze(1)

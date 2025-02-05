@@ -205,7 +205,6 @@ if __name__ == "__main__":
     )
     train_wsi_vol = train_sample["wsi_volume"].float().to(device)
     train_label = train_sample["label"].to(device)
-    print(train_sample["modality_mask"])
     modality_mask = train_sample["modality_mask"].to(device)
     madpe.eval()
     with torch.no_grad():
