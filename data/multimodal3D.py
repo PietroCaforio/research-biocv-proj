@@ -225,7 +225,7 @@ class MultimodalCTWSIDataset(Dataset):
 
         return np.stack(patches, axis=0).transpose(3, 0, 1, 2)
 
-    def _process_patch(patch_path):
+    def _process_patch(self, patch_path):
         img = cv2.imread(patch_path)
         img_np = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         return img_np
