@@ -1,1 +1,0 @@
-{"train_accuracy":0.7338709677419355,"val_accuracy":0.5,"G1_Acc":0,"_wandb":{"runtime":513},"_step":0,"G2_ValAcc":0,"G1_TrainAcc":0,"val_loss":1.3066274523735046,"G1_ValAcc":0,"G3_Acc":34.375,"G3_TrainAcc":33.333333461515366,"G2_Acc":34.375,"G2_TrainAcc":92.06413218090611,"G3_ValAcc":0,"train_loss":0.7029505802258369,"_runtime":382.858564787,"_timestamp":1.7393799698614943e+09}

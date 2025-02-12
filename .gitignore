@@ -3,8 +3,7 @@
 
 # don't blacklist directories
 !*/
-# but blacklist wandb directory
-./wandb/*
+
 # and don't blacklist these files
 !.gitignore
 !*.md
@@ -20,3 +19,5 @@
 !Makefile
 !*.tcia
 !*.json
+# but blacklist wandb directory
+wandb/
