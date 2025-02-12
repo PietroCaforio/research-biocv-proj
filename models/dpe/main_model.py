@@ -22,7 +22,7 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
         histo_backbone,
         class_predictor,
         backbone_layers,
-        backbone_grad=True,
+        backbone_grad=False,
     ):
         """
         args:
@@ -46,9 +46,7 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
             for p in self.histo_backbone.parameters():
                 p.requires_grad_(False)
 
-    def forward(
-        self, rad_vols, histo_vols, test_dist=None, modality_flag=torch.tensor([1, 1])
-    ):
+    def forward(self, rad_vols, histo_vols, modality_flag=None):
         """Forward pass
         Note: If the training is done in sequence mode, that is, test_imgs.dim() == 5,
         then the batch dimension corresponds to the first dimensions.
@@ -109,9 +107,11 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
 #    return net
 #
 
-# TODO: @model_constructor
+# @model_constructor
 def madpe_resnet34(
     backbone_pretrained=True,
+    vol_depth=66,
+    vol_wh=224,
     check_point_path="./models/pretrain_weights/r3d34_K_200ep.pth",
 ):
     # radiology backbone
@@ -122,7 +122,7 @@ def madpe_resnet34(
         # !gdown --id 1fFN5J2He6eTqMPRl_M9gFtFfpUmhtQc9
         pretrain = torch.load(
             check_point_path,
-            map_location="cpu",
+            map_location="cuda:0",
             weights_only=True,
         )
 

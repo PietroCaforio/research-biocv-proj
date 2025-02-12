@@ -1,0 +1,1 @@
+{"_runtime":3499.421103248,"G2_TrainAcc":97.74647887323944,"Val Accuracy":0.4423076923076923,"_wandb":{"runtime":3575},"G1_TrainAcc":93.33333333333333,"G3_TrainAcc":96.46017699115045,"Train Loss":0.06474067350583416,"G1_ValAcc":0,"_step":8,"_timestamp":1.739299059139285e+09,"Train Accuracy":0.9718875502008032,"Val Loss":7.602070069722946,"G3_ValAcc":0,"Epoch":9,"G2_ValAcc":100}

@@ -1,0 +1,61 @@
+_wandb:
+    value:
+        cli_version: 0.19.6
+        m: []
+        python_version: 3.9.20
+        t:
+            "1":
+                - 1
+                - 41
+                - 55
+            "2":
+                - 1
+                - 41
+                - 55
+            "3":
+                - 13
+                - 16
+                - 23
+                - 24
+                - 55
+            "4": 3.9.20
+            "5": 0.19.6
+            "8":
+                - 5
+            "12": 0.19.6
+            "13": linux-x86_64
+data:
+    value:
+        dataset_path: ./data/processed/processed_CPTAC_PDA_71_3D/
+        missing_modality_prob: 0
+        num_workers: 8
+        patches_per_wsi: 66
+        require_both_modalities: true
+        sampling_strategy: consecutive
+model:
+    value:
+        checkpoint_path: ./models/pretrain_weights/r3d34_K_200ep.pth
+        vol_depth: 66
+        vol_wh: 224
+training:
+    value:
+        batch_size: 8
+        checkpoint_dir: ./models/ckpts/
+        early_stopping:
+            min_delta: 0.0001
+            mode: min
+            patience: 10
+        learning_rate: 0.001
+        log_interval: 1
+        monitor_metric: val_loss
+        num_epochs: 100
+        scheduler:
+            factor: 0.1
+            min_lr: 1e-06
+            mode: min
+            patience: 5
+            type: reduce_lr_on_plateau
+wandb:
+    value:
+        name: FullDatasetTraining
+        project_name: multimodal_training

@@ -1,9 +1,11 @@
 # blacklist everyhting
 *
+
 # don't blacklist directories
 !*/
-
-# and these files
+# but blacklist wandb directory
+./wandb/*
+# and don't blacklist these files
 !.gitignore
 !*.md
 !*.py
@@ -17,3 +19,4 @@
 !*.yaml
 !Makefile
 !*.tcia
+!*.json

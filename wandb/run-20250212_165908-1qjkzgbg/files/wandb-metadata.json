@@ -1,0 +1,54 @@
+{
+  "os":  "Linux-5.4.0-205-generic-x86_64-with-glibc2.31",
+  "python":  "CPython 3.9.20",
+  "startedAt":  "2025-02-12T16:59:09.529249Z",
+  "args":  [
+    "--config",
+    "scripts/presets/train_config.json",
+    "--experiment-name",
+    "FullDatasetTraining"
+  ],
+  "program":  "/home/users/pietro.caforio/thesis/research-biocv-proj/scripts/train.py",
+  "codePath":  "scripts/train.py",
+  "git":  {
+    "remote":  "https://github.com/PietroCaforio/research-biocv-proj.git",
+    "commit":  "14da35660f58312b42a27ff8a1189245f2b75ec9"
+  },
+  "email":  "pietro.caforio@mail.polimi.it",
+  "root":  "/home/users/pietro.caforio/thesis/research-biocv-proj",
+  "host":  "ampere",
+  "executable":  "/home/users/pietro.caforio/anaconda3/envs/research_biocv_proj/bin/python",
+  "codePathLocal":  "scripts/train.py",
+  "cpu_count":  8,
+  "cpu_count_logical":  16,
+  "gpu":  "NVIDIA RTX A5000",
+  "gpu_count":  2,
+  "disk":  {
+    "/":  {
+      "total":  "490577010688",
+      "used":  "80199987200"
+    }
+  },
+  "memory":  {
+    "total":  "33623171072"
+  },
+  "cpu":  {
+    "count":  8,
+    "countLogical":  16
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA RTX A5000",
+      "memoryTotal":  "25757220864",
+      "cudaCores":  8192,
+      "architecture":  "Ampere"
+    },
+    {
+      "name":  "NVIDIA RTX A5000",
+      "memoryTotal":  "25757220864",
+      "cudaCores":  8192,
+      "architecture":  "Ampere"
+    }
+  ],
+  "cudaVersion":  "12.3"
+}

@@ -27,7 +27,7 @@ class MultimodalCTWSIDataset(Dataset):
         patches_per_wsi: int = 66,
         sampling_strategy: str = "consecutive",
         missing_modality_prob: float = 0.0,  # Additional random masking probability
-        vol_std_method: str = "padding",
+        vol_std_method: str = None,
         require_both_modalities: bool = False,  # Whether to only include patients
         # with both modalities
     ):
@@ -284,9 +284,11 @@ class MultimodalCTWSIDataset(Dataset):
 
         return {
             "patient_id": patient_id,
-            "ct_volume": ct_volume,
-            "wsi_volume": wsi_volume,
-            "label": self.map_classes[self.labels[patient_id]],
+            "ct_volume": torch.from_numpy(ct_volume).float(),
+            "wsi_volume": torch.from_numpy(wsi_volume).float(),
+            "label": torch.tensor(
+                self.map_classes[self.labels[patient_id]], dtype=torch.long
+            ),
             "modality_mask": torch.tensor(final_mask, dtype=torch.float32),
             "base_modality_mask": torch.tensor(base_mask, dtype=torch.float32),
         }

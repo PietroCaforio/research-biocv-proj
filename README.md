@@ -47,7 +47,16 @@
    * `cd scripts`
    * `./run_shell_commands/run_preprocess_CPTAC_UCEC3D.sh`
 #### Histopathology:
-1. Clone the CLAM repository: `git clone https://github.com/mahmoodlab/CLAM.git`
+1. Clone the [CLAM](https://github.com/mahmoodlab/CLAM) repository: `git clone https://github.com/mahmoodlab/CLAM.git`
 2. Patch the histologies: ` python create_patches_fp.py --source ./path-to-cptacpdahisto --save_dir ./CPTAC_PDA_PATCH --patch_size 224 --preset bwh_biopsy.csv --seg --patch --stitch
 `
 3. cd into "research-biocv-proj/scripts" folder and run: `./run_shell_commands/run_setup_wsi.sh`
+
+## Run experiments
+To run experiments you need to configure wandb.
+
+To do so first install wandb through: `pip install --user wandb`
+
+Then run: `wand login` on your shell and load your key
+
+To download the backbone's pretrained weights run: `make backbone-pretrained-weights` from this repo folder
