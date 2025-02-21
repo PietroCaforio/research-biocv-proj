@@ -51,7 +51,7 @@ def main():
 
     # Create datasets
     train_dataset = MultimodalCTWSIDataset(
-        split="train",
+        split=config["data"]["train_split"],
         dataset_path=config["data"]["dataset_path"],
         patches_per_wsi=config["data"]["patches_per_wsi"],
         sampling_strategy=config["data"]["sampling_strategy"],
@@ -60,7 +60,7 @@ def main():
     )
 
     val_dataset = MultimodalCTWSIDataset(
-        split="val",
+        split=config["data"]["val_split"],
         dataset_path=config["data"]["dataset_path"],
         patches_per_wsi=config["data"]["patches_per_wsi"],
         sampling_strategy=config["data"]["sampling_strategy"],
@@ -89,16 +89,25 @@ def main():
 
     # Initialize model
     model = madpe_resnet34(
-        check_point_path=config["model"]["checkpoint_path"],
+        pretrained_rad_path=config["training"]["pretrained_rad_path"],
+        pretrained_histo_path=config["training"]["pretrained_histo_path"],
         vol_depth=config["model"]["vol_depth"],
         vol_wh=config["model"]["vol_wh"],
+        backbone_pretrained=True,
     )
     model.to(device)
 
     # Initialize loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=config["training"]["learning_rate"])
-
+    if config["training"]["scheduler"]["type"] == "reduce_lr_on_plateau":
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode=config["training"]["scheduler"]["mode"],
+            factor=config["training"]["scheduler"]["factor"],
+            patience=config["training"]["scheduler"]["patience"],
+            min_lr=config["training"]["scheduler"]["min_lr"],
+        )
     # Initialize trainer
     trainer = MultimodalTrainer(
         model=model,
@@ -109,6 +118,7 @@ def main():
         config=config,
         device=device,
         experiment_name=args.experiment_name,
+        scheduler=scheduler,
     )
 
     # Load checkpoint if specified

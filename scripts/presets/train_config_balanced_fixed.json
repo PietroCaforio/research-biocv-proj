@@ -1,17 +1,17 @@
 {
     "wandb": {
         "project_name": "multimodal_training",
-        "name": "FullDatasetTraining"
+        "name": "BalancedDownSampledFixed"
     },
     "data": {
         "dataset_path": "./data/processed/processed_CPTAC_PDA_71_3D/",
         "patches_per_wsi": 66,
-        "sampling_strategy": "consecutive",
+        "sampling_strategy": "consecutive-fixed",
         "missing_modality_prob": 0.0,
         "require_both_modalities": true,
         "num_workers": 8,
-        "train_split":"train",
-        "val_split":"val"
+        "train_split":"train_balanced",
+        "val_split":"val_balanced"
     },
     "model": {
         "checkpoint_path": "./models/ckpts/",
@@ -21,7 +21,7 @@
     "training": {
         "num_epochs": 100,
         "batch_size": 8,
-        "learning_rate": 0.001,
+        "learning_rate": 1e-5,
         "pretrained_rad_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
         "pretrained_histo_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
         "checkpoint_dir": "./models/ckpts/",
@@ -30,8 +30,8 @@
             "type": "reduce_lr_on_plateau",
             "mode": "min",
             "factor": 0.1,
-            "patience": 5,
-            "min_lr": 1e-6
+            "patience": 20,
+            "min_lr": 1e-7
         },
         "early_stopping": {
             "patience": 10,

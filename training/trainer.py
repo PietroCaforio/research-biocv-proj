@@ -225,6 +225,8 @@ class BaseTrainer:
             # Combine metrics and log
             epoch_metrics = {**train_metrics, **val_metrics}
             self.training_metrics[epoch] = epoch_metrics
+            current_lr = self.optimizer.param_groups[0]["lr"]
+            epoch_metrics["learning_rate"] = current_lr
             wandb.log(epoch_metrics)
 
             # Update learning rate scheduler
@@ -250,7 +252,7 @@ class BaseTrainer:
             # Log epoch summary
             self.logger.info(
                 f'Epoch {epoch+1}/{self.config["training"]["num_epochs"]} - Metrics: '
-                + ", ".join([f"{k}: {v:.4f}" for k, v in epoch_metrics.items()])
+                + ", ".join([f"{k}: {v:.8f}" for k, v in epoch_metrics.items()])
             )
 
         wandb.finish()
@@ -265,6 +267,7 @@ def per_class_accuracy(
     for i in range(3):  # G1, G2, G3
         mask = targets == i
         if mask.sum() > 0:
+            # correct per class i / number of sampler per class i
             acc = ((predicted == i) & mask).float().sum() / mask.float().sum()
             accuracies[f"G{i+1}_Acc"] = acc.item() * 100
         else:
@@ -403,7 +406,7 @@ class MultimodalTrainer(BaseTrainer):
 
                 metrics["val_accuracy"] += accuracy_metrics["accuracy"]
                 for key, value in class_metrics.items():
-                    metrics[key] = metrics.get(key, 0.0) + value
+                    metrics[f"{key.replace('Acc', 'ValAcc')}"] += value
 
         # Compute averages
         for key in metrics:

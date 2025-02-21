@@ -112,7 +112,8 @@ def madpe_resnet34(
     backbone_pretrained=True,
     vol_depth=66,
     vol_wh=224,
-    check_point_path="./models/pretrain_weights/r3d34_K_200ep.pth",
+    pretrained_rad_path="./models/pretrain_weights/r3d34_K_200ep.pth",
+    pretrained_histo_path="./models/pretrain_weights/r3d34_K_200ep.pth",
 ):
     # radiology backbone
     rad_backbone_net = resnet3D.generate_model(34, n_input_channels=3, n_classes=700)
@@ -121,7 +122,7 @@ def madpe_resnet34(
         # !conda install -y gdown
         # !gdown --id 1fFN5J2He6eTqMPRl_M9gFtFfpUmhtQc9
         pretrain = torch.load(
-            check_point_path,
+            pretrained_rad_path,
             map_location="cuda:0",
             weights_only=True,
         )

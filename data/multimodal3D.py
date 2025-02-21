@@ -30,10 +30,14 @@ class MultimodalCTWSIDataset(Dataset):
         vol_std_method: str = None,
         require_both_modalities: bool = False,  # Whether to only include patients
         # with both modalities
+        pairing_mode: str = None,  # 'all_combinations, 'one_to_one', 'fixed_count'
+        pairs_per_patient: int = None,  # For fixed_count_mode
+        allow_repeats: bool = False,  # For fixed_count mode
     ):
         super().__init__()
-        assert split in ["train", "val", "overfit", "all"]
-        assert sampling_strategy in ["random", "consecutive"]
+        # assert split in ["train", "val", "overfit", "all"]
+        assert sampling_strategy in ["random", "consecutive", "consecutive-fixed"]
+        assert pairing_mode in ["all_combinations", "one_to_one", "fixed_count"]
         assert 0 <= missing_modality_prob <= 1
 
         self.dataset_path = dataset_path
@@ -43,6 +47,11 @@ class MultimodalCTWSIDataset(Dataset):
         self.vol_std_method = vol_std_method
         self.require_both_modalities = require_both_modalities
 
+        self.pairing_mode = (
+            pairing_mode  # 'all_combinations', 'one_to_one', or 'fixed_count'
+        )
+        self.pairs_per_patient = pairs_per_patient  # For fixed_count mode
+        self.allow_repeats = allow_repeats  # For fixed_count mode
         # Load labels
         self.labels = {
             k.strip(): v.strip()
@@ -68,8 +77,114 @@ class MultimodalCTWSIDataset(Dataset):
         # Calculate maximum CT depth for standardization
         self.max_ct_depth = self._calculate_max_ct_depth()
 
+    def _get_max_pairs_for_patient(self, ct_scans, wsi_folders, allow_repeats):
+        """
+        Calculate maximum possible pairs for a patient based on available data and pairing mode.
+
+        Args:
+            ct_scans (list): List of CT scan files
+            wsi_folders (list): List of WSI folder names
+            allow_repeats (bool): If True, return all possible combinations count
+                                If False, return maximum unique pairs count
+
+        Returns:
+            int: Maximum number of possible pairs
+        """
+        if not ct_scans or not wsi_folders:
+            return 0
+
+        if allow_repeats:
+            return len(ct_scans) * len(wsi_folders)
+        else:
+            return min(len(ct_scans), len(wsi_folders))
+
+    def _get_fixed_pairs(self, ct_scans, wsi_folders, n_pairs, allow_repeats=True):
+        """
+        Generate fixed number of pairs between CT scans and WSI folders.
+
+        Args:
+            ct_scans (list): List of CT scan files
+            wsi_folders (list): List of WSI folder names
+            n_pairs (int): Number of pairs to generate
+            allow_repeats (bool): If True, allows repeating elements to reach n_pairs
+                                If False, limits pairs to minimum unique combinations
+
+        Returns:
+            list: List of (ct_scan, wsi_folder) pairs
+        """
+        max_unique_pairs = min(len(ct_scans), len(wsi_folders))
+
+        if not allow_repeats:
+            n_pairs = min(n_pairs, max_unique_pairs)
+
+        # Generate initial unique pairs
+        shuffled_ct = ct_scans.copy()
+        shuffled_wsi = wsi_folders.copy()
+        random.shuffle(shuffled_ct)
+        random.shuffle(shuffled_wsi)
+
+        pairs = list(
+            zip(shuffled_ct[:max_unique_pairs], shuffled_wsi[:max_unique_pairs])
+        )
+
+        if n_pairs <= len(pairs):
+            # Downsample if needed
+            random.shuffle(pairs)
+            return pairs[:n_pairs]
+
+        if not allow_repeats:
+            return pairs
+
+        # Need to generate additional pairs with repeats
+        while len(pairs) < n_pairs:
+            ct_scan = random.choice(ct_scans)
+            wsi_folder = random.choice(wsi_folders)
+            pairs.append((ct_scan, wsi_folder))
+
+        return pairs
+
     def _load_split(self, split):
-        """Load and organize all CT and WSI data for the given split"""
+        """Load and organize all CT and WSI data for the given split
+
+        Supports different pairing modes:
+        - 'all_combinations': Creates all possible CT-WSI pairs
+        - 'one_to_one': Creates random 1:1 pairs
+        - 'fixed_count': Creates fixed number of pairs per patient
+        """
+        # First pass: count maximum possible pairs per patient
+        max_pairs_possible = float("inf")
+        if self.pairing_mode == "fixed_count":
+            for row in open(f"{os.path.join(self.dataset_path, split)}.txt"):
+                patient_id = row.strip()
+
+                ct_path = os.path.join(self.dataset_path, "CT", patient_id)
+                ct_scans = []
+                if os.path.exists(ct_path):
+                    ct_scans = [f for f in os.listdir(ct_path)]
+
+                wsi_path = os.path.join(self.dataset_path, "WSI")
+                wsi_folders = [
+                    f
+                    for f in os.listdir(wsi_path)
+                    if patient_id in f and os.path.isdir(os.path.join(wsi_path, f))
+                ]
+
+                patient_max_pairs = self._get_max_pairs_for_patient(
+                    ct_scans, wsi_folders, self.allow_repeats
+                )
+
+                if patient_max_pairs > 0:  # Only update if patient has both modalities
+                    print(patient_id, patient_max_pairs)
+                    max_pairs_possible = min(max_pairs_possible, patient_max_pairs)
+
+        # Use provided pairs_per_patient or calculated maximum
+        n_pairs = (
+            self.pairs_per_patient
+            if self.pairs_per_patient is not None
+            else max_pairs_possible
+        )
+
+        # Main loading loop
         with open(f"{os.path.join(self.dataset_path, split)}.txt") as split_file:
             for row in split_file:
                 patient_id = row.strip()
@@ -106,52 +221,78 @@ class MultimodalCTWSIDataset(Dataset):
                 else:
                     self.modality_stats["wsi_only"] += 1
 
-                # Generate samples based on available data
+                # Generate samples based on available data and pairing mode
                 if ct_scans and wsi_folders:
-                    # If both modalities exist, create all combinations
-                    for ct_scan, wsi_folder in product(ct_scans, wsi_folders):
-                        self.samples.append(
-                            {
-                                "patient_id": patient_id,
-                                "ct_path": os.path.join("CT", patient_id, ct_scan),
-                                "wsi_folder": os.path.join("WSI", wsi_folder),
-                                "base_modality_mask": [
-                                    1,
-                                    1,
-                                ],  # Both present at dataset level
-                            }
+                    if self.pairing_mode == "fixed_count":
+                        # Generate fixed number of pairs
+                        pairs = self._get_fixed_pairs(
+                            ct_scans, wsi_folders, n_pairs, self.allow_repeats
                         )
+                        for ct_scan, wsi_folder in pairs:
+                            self.samples.append(
+                                {
+                                    "patient_id": patient_id,
+                                    "ct_path": os.path.join("CT", patient_id, ct_scan),
+                                    "wsi_folder": os.path.join("WSI", wsi_folder),
+                                    "base_modality_mask": [1, 1],
+                                }
+                            )
+
+                    elif self.pairing_mode == "one_to_one":
+                        # Original one_to_one logic
+                        num_pairs = min(len(ct_scans), len(wsi_folders))
+                        shuffled_ct = ct_scans.copy()
+                        shuffled_wsi = wsi_folders.copy()
+                        random.shuffle(shuffled_ct)
+                        random.shuffle(shuffled_wsi)
+
+                        for ct_scan, wsi_folder in zip(
+                            shuffled_ct[:num_pairs], shuffled_wsi[:num_pairs]
+                        ):
+                            self.samples.append(
+                                {
+                                    "patient_id": patient_id,
+                                    "ct_path": os.path.join("CT", patient_id, ct_scan),
+                                    "wsi_folder": os.path.join("WSI", wsi_folder),
+                                    "base_modality_mask": [1, 1],
+                                }
+                            )
+
+                    else:  # 'all_combinations' mode
+                        for ct_scan, wsi_folder in product(ct_scans, wsi_folders):
+                            self.samples.append(
+                                {
+                                    "patient_id": patient_id,
+                                    "ct_path": os.path.join("CT", patient_id, ct_scan),
+                                    "wsi_folder": os.path.join("WSI", wsi_folder),
+                                    "base_modality_mask": [1, 1],
+                                }
+                            )
+
                 elif ct_scans:
-                    # If only CT exists
                     for ct_scan in ct_scans:
                         self.samples.append(
                             {
                                 "patient_id": patient_id,
                                 "ct_path": os.path.join("CT", patient_id, ct_scan),
                                 "wsi_folder": None,
-                                "base_modality_mask": [
-                                    1,
-                                    0,
-                                ],  # Only CT present at dataset level
+                                "base_modality_mask": [1, 0],
                             }
                         )
+
                 elif wsi_folders:
-                    # If only WSI exists
                     for wsi_folder in wsi_folders:
                         self.samples.append(
                             {
                                 "patient_id": patient_id,
                                 "ct_path": None,
                                 "wsi_folder": os.path.join("WSI", wsi_folder),
-                                "base_modality_mask": [
-                                    0,
-                                    1,
-                                ],  # Only WSI present at dataset level
+                                "base_modality_mask": [0, 1],
                             }
                         )
 
-                self.classfreq[self.labels[patient_id]] += len(self.samples) - len(
-                    self.classfreq
+                self.classfreq[self.labels[patient_id]] += len(self.samples) - sum(
+                    self.classfreq.values()
                 )
 
     def _calculate_max_ct_depth(self):
@@ -198,12 +339,16 @@ class MultimodalCTWSIDataset(Dataset):
             )
         elif self.sampling_strategy == "random":
             selected_patches = random.sample(patch_files, self.patches_per_wsi)
-        else:  # consecutive
+        elif self.sampling_strategy == "consecutive":  # consecutive
             start_idx = random.randint(0, len(patch_files) - self.patches_per_wsi)
             selected_patches = patch_files[
                 start_idx : start_idx + self.patches_per_wsi  # noqa E203
             ]
-
+        else:  # Consecutive - fixed
+            start_idx = round((len(patch_files) - self.patches_per_wsi) / 2)
+            selected_patches = patch_files[
+                start_idx : start_idx + self.patches_per_wsi  # noqa E203
+            ]
         # Load selected patches
         # for patch_file in selected_patches:
         #     patch_path = os.path.join(self.dataset_path, wsi_folder, patch_file)
@@ -327,9 +472,12 @@ def test_multimodal_dataset():
         split="all",
         dataset_path="./data/processed/processed_CPTAC_PDA_71_3D",
         patches_per_wsi=66,
-        sampling_strategy="consecutive",
+        sampling_strategy="consecutive-fixed",
         missing_modality_prob=0.2,  # 20% chance of each modality being missing
         require_both_modalities=True,
+        pairing_mode="one_to_one",
+        allow_repeats=False,
+        pairs_per_patient=None,
     )
 
     # Print dataset stats
