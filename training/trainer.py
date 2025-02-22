@@ -70,7 +70,9 @@ class BaseTrainer:
 
     def setup_logging(self):
         """Initialize logging and create checkpoint directory."""
-        self.checkpoint_dir = Path(self.config["training"]["checkpoint_dir"])
+        self.checkpoint_dir = Path(
+            self.config["training"]["checkpoint_dir"] + self.experiment_name
+        )
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
         logging.basicConfig(

@@ -57,6 +57,10 @@ def main():
         sampling_strategy=config["data"]["sampling_strategy"],
         missing_modality_prob=config["data"]["missing_modality_prob"],
         require_both_modalities=config["data"]["require_both_modalities"],
+        pairing_mode=config["data"]["pairing_mode"],
+        allow_repeats=config["data"]["allow_repeats"],
+        pairs_per_patient=config["data"]["pairs_per_patient"],
+        downsample=config["data"]["downsample"],
     )
 
     val_dataset = MultimodalCTWSIDataset(
@@ -66,6 +70,10 @@ def main():
         sampling_strategy=config["data"]["sampling_strategy"],
         missing_modality_prob=config["data"]["missing_modality_prob"],
         require_both_modalities=config["data"]["require_both_modalities"],
+        pairing_mode=config["data"]["pairing_mode"],
+        allow_repeats=config["data"]["allow_repeats"],
+        pairs_per_patient=config["data"]["pairs_per_patient"],
+        downsample=config["data"]["downsample"],
     )
 
     # Create dataloaders

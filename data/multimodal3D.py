@@ -33,6 +33,7 @@ class MultimodalCTWSIDataset(Dataset):
         pairing_mode: str = None,  # 'all_combinations, 'one_to_one', 'fixed_count'
         pairs_per_patient: int = None,  # For fixed_count_mode
         allow_repeats: bool = False,  # For fixed_count mode
+        downsample: bool = False,
     ):
         super().__init__()
         # assert split in ["train", "val", "overfit", "all"]
@@ -52,6 +53,7 @@ class MultimodalCTWSIDataset(Dataset):
         )
         self.pairs_per_patient = pairs_per_patient  # For fixed_count mode
         self.allow_repeats = allow_repeats  # For fixed_count mode
+        self.downsample = downsample
         # Load labels
         self.labels = {
             k.strip(): v.strip()
@@ -95,7 +97,7 @@ class MultimodalCTWSIDataset(Dataset):
 
         if allow_repeats:
             return len(ct_scans) * len(wsi_folders)
-        else:
+        else:  # one-to-one
             return min(len(ct_scans), len(wsi_folders))
 
     def _get_fixed_pairs(self, ct_scans, wsi_folders, n_pairs, allow_repeats=True):
@@ -151,9 +153,11 @@ class MultimodalCTWSIDataset(Dataset):
         - 'one_to_one': Creates random 1:1 pairs
         - 'fixed_count': Creates fixed number of pairs per patient
         """
+
+        class_counts = [0, 0, 0]  # G1, G2, G3
         # First pass: count maximum possible pairs per patient
         max_pairs_possible = float("inf")
-        if self.pairing_mode == "fixed_count":
+        if self.pairing_mode == "fixed_count" or self.downsample:
             for row in open(f"{os.path.join(self.dataset_path, split)}.txt"):
                 patient_id = row.strip()
 
@@ -174,8 +178,13 @@ class MultimodalCTWSIDataset(Dataset):
                 )
 
                 if patient_max_pairs > 0:  # Only update if patient has both modalities
-                    print(patient_id, patient_max_pairs)
+
                     max_pairs_possible = min(max_pairs_possible, patient_max_pairs)
+                    class_counts[
+                        self.map_classes[self.labels[patient_id]]
+                    ] += patient_max_pairs
+
+        downsample_trunc = min(class_counts)  # downsampling threshold
 
         # Use provided pairs_per_patient or calculated maximum
         n_pairs = (
@@ -188,7 +197,12 @@ class MultimodalCTWSIDataset(Dataset):
         with open(f"{os.path.join(self.dataset_path, split)}.txt") as split_file:
             for row in split_file:
                 patient_id = row.strip()
-
+                # Don't add patients to class if class already downsampled
+                if (
+                    self.downsample
+                    and self.classfreq[self.labels[patient_id]] >= downsample_trunc
+                ):
+                    continue
                 # Find all CT scans for this patient
                 ct_path = os.path.join(self.dataset_path, "CT", patient_id)
                 ct_scans = []
@@ -221,6 +235,8 @@ class MultimodalCTWSIDataset(Dataset):
                 else:
                     self.modality_stats["wsi_only"] += 1
 
+                ub = downsample_trunc - self.classfreq[self.labels[patient_id]]
+                cnt = 0
                 # Generate samples based on available data and pairing mode
                 if ct_scans and wsi_folders:
                     if self.pairing_mode == "fixed_count":
@@ -228,7 +244,11 @@ class MultimodalCTWSIDataset(Dataset):
                         pairs = self._get_fixed_pairs(
                             ct_scans, wsi_folders, n_pairs, self.allow_repeats
                         )
+
                         for ct_scan, wsi_folder in pairs:
+                            if cnt >= ub and self.downsample:
+                                break
+                            cnt += 1
                             self.samples.append(
                                 {
                                     "patient_id": patient_id,
@@ -249,6 +269,9 @@ class MultimodalCTWSIDataset(Dataset):
                         for ct_scan, wsi_folder in zip(
                             shuffled_ct[:num_pairs], shuffled_wsi[:num_pairs]
                         ):
+                            if cnt >= ub and self.downsample:
+                                break
+                            cnt += 1
                             self.samples.append(
                                 {
                                     "patient_id": patient_id,
@@ -260,6 +283,9 @@ class MultimodalCTWSIDataset(Dataset):
 
                     else:  # 'all_combinations' mode
                         for ct_scan, wsi_folder in product(ct_scans, wsi_folders):
+                            if cnt >= ub and self.downsample:
+                                break
+                            cnt += 1
                             self.samples.append(
                                 {
                                     "patient_id": patient_id,
@@ -271,6 +297,9 @@ class MultimodalCTWSIDataset(Dataset):
 
                 elif ct_scans:
                     for ct_scan in ct_scans:
+                        if cnt >= ub and self.downsample:
+                            break
+                        cnt += 1
                         self.samples.append(
                             {
                                 "patient_id": patient_id,
@@ -282,6 +311,9 @@ class MultimodalCTWSIDataset(Dataset):
 
                 elif wsi_folders:
                     for wsi_folder in wsi_folders:
+                        if cnt >= ub and self.downsample:
+                            break
+                        cnt += 1
                         self.samples.append(
                             {
                                 "patient_id": patient_id,
@@ -469,7 +501,7 @@ class MultimodalCTWSIDataset(Dataset):
 def test_multimodal_dataset():
     # Initialize dataset
     dataset = MultimodalCTWSIDataset(
-        split="all",
+        split="val",
         dataset_path="./data/processed/processed_CPTAC_PDA_71_3D",
         patches_per_wsi=66,
         sampling_strategy="consecutive-fixed",
@@ -478,6 +510,7 @@ def test_multimodal_dataset():
         pairing_mode="one_to_one",
         allow_repeats=False,
         pairs_per_patient=None,
+        downsample=True,
     )
 
     # Print dataset stats
