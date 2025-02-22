@@ -19,9 +19,6 @@ from data.multimodal3D import MultimodalCTWSIDataset  # noqa E402
 from models.dpe.main_model import madpe_resnet34  # noqa E402
 
 
-wandb.login()
-
-
 class BaseTrainer:
     """Flexible base trainer class that handles configurable training functionality."""
 
@@ -65,6 +62,13 @@ class BaseTrainer:
         self.current_epoch = 0
         self.best_val_loss = float("inf")
         self.training_metrics = {}
+        wandb.login()
+        wandb.init(
+            project=config["wandb"]["project_name"],
+            name=self.experiment_name,
+            config=config,
+            dir=config["training"]["checkpoint_dir"] + self.experiment_name,
+        )
 
         # Setup logging and checkpoints
         self.setup_logging()
@@ -275,6 +279,7 @@ def per_class_accuracy(
             accuracies[f"G{i+1}_Acc"] = acc.item()
         else:
             accuracies[f"G{i+1}_Acc"] = 0.0
+    accuracies["Avg_Acc"] = sum(v for k, v in accuracies.items()) / 3.0
     return accuracies
 
 
@@ -294,10 +299,12 @@ def precision_per_class(
         fp[c] = ((targets != c) & (outputs == c)).sum().float()
         fn[c] = ((targets == c) & (outputs != c)).sum().float()
     precision_per_class = tp / (tp + fp + 1e-8)
+
     return {
         "precisionG1": precision_per_class[0].item(),
         "precisionG2": precision_per_class[1].item(),
         "precisionG3": precision_per_class[2].item(),
+        "avg_precision": sum(precision_per_class) / 3.0,
     }
 
 
@@ -318,6 +325,7 @@ def recall_per_class(outputs: torch.Tensor, targets: torch.Tensor) -> Dict[str, 
         "recallG1": recall_per_class[0].item(),
         "recallG2": recall_per_class[1].item(),
         "recallG3": recall_per_class[2].item(),
+        "avg_recall": sum(recall_per_class) / 3.0,
     }
 
 
@@ -345,14 +353,15 @@ def f1_per_class(outputs: torch.Tensor, targets: torch.Tensor) -> Dict[str, floa
         "F1scoreG1": f1_per_class[0].item(),
         "F1scoreG2": f1_per_class[1].item(),
         "F1scoreG3": f1_per_class[2].item(),
+        "avg_F1score": sum(f1_per_class) / 3.0,
     }
 
 
-def avg_accuracy(outputs: torch.Tensor, targets: torch.Tensor) -> Dict[str, float]:
+def accuracy(outputs: torch.Tensor, targets: torch.Tensor) -> Dict[str, float]:
     """Calculate overall accuracy for all classes combined."""
     _, predicted = torch.max(outputs, 1)
     accuracy = (predicted == targets).float().mean()
-    return {"AvgAccuracy": accuracy.item()}
+    return {"Accuracy": accuracy.item()}
 
 
 class MultimodalTrainer(BaseTrainer):
@@ -373,7 +382,7 @@ class MultimodalTrainer(BaseTrainer):
                 "precision": precision_per_class,
                 "recall": recall_per_class,
                 "f1_score": f1_per_class,
-                "avg_accuracy": avg_accuracy,
+                "avg_accuracy": accuracy,
             }
 
     def process_batch(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:

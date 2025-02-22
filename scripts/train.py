@@ -1,14 +1,12 @@
 import argparse
 import json
+import shutil
 import sys
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-
-import wandb
-
 
 sys.path.insert(0, "./")  # noqa: E402
 from data.multimodal3D import MultimodalCTWSIDataset  # noqa: E402
@@ -41,13 +39,6 @@ def main():
 
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # Initialize wandb
-    wandb.init(
-        project=config["wandb"]["project_name"],
-        name=args.experiment_name,
-        config=config,
-    )
 
     # Create datasets
     train_dataset = MultimodalCTWSIDataset(
@@ -129,6 +120,9 @@ def main():
         scheduler=scheduler,
     )
 
+    shutil.copy(
+        args.config, config["training"]["checkpoint_dir"] + args.experiment_name
+    )
     # Load checkpoint if specified
     if args.checkpoint:
         trainer.load_checkpoint(args.checkpoint)

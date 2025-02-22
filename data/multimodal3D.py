@@ -510,7 +510,7 @@ def test_multimodal_dataset():
         pairing_mode="one_to_one",
         allow_repeats=False,
         pairs_per_patient=None,
-        downsample=True,
+        downsample=False,
     )
 
     # Print dataset stats

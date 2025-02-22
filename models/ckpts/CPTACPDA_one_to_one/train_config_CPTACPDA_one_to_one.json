@@ -1,7 +1,7 @@
 {
     "wandb": {
         "project_name": "multimodal_training",
-        "name": "CPTACPDA_one_to_one_1"
+        "name": "CPTACPDA_one_to_one"
     },
     "data": {
         "dataset_path": "./data/processed/processed_CPTAC_PDA_71_3D/",
@@ -25,7 +25,7 @@
     "training": {
         "num_epochs": 100,
         "batch_size": 8,
-        "learning_rate": 1e-6,
+        "learning_rate": 1e-5,
         "pretrained_rad_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
         "pretrained_histo_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
         "checkpoint_dir": "./models/ckpts/",
@@ -35,7 +35,7 @@
             "mode": "min",
             "factor": 0.1,
             "patience": 20,
-            "min_lr": 1e-8
+            "min_lr": 1e-7
         },
         "early_stopping": {
             "patience": 10,
