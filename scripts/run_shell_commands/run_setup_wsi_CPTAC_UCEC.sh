@@ -1,0 +1,1 @@
+python setup_wsi.py --raw_path ../../CPTAC_UCEC/ --patch_path ../../CLAM/CPTAC_UCEC_PATCH/patches/ --destination ../data/processed/processed_CPTACUCEC_3D_pad/WSI/ --patients ../data/processed/processed_CPTACUCEC_3D_pad/all.txt

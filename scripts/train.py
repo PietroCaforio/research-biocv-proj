@@ -107,6 +107,13 @@ def main():
             patience=config["training"]["scheduler"]["patience"],
             min_lr=config["training"]["scheduler"]["min_lr"],
         )
+    elif config["training"]["scheduler"]["type"] == "cosine_annealing_lr":
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=config["training"]["scheduler"]["T_max"],
+            eta_min=config["training"]["scheduler"]["eta_min"],
+            last_epoch=config["training"]["scheduler"]["last_epoch"],
+        )
     # Initialize trainer
     trainer = MultimodalTrainer(
         model=model,

@@ -23,19 +23,18 @@
         "vol_wh": 224
     },
     "training": {
-        "num_epochs": 250,
+        "num_epochs": 300,
         "batch_size": 8,
-        "learning_rate": 1e-7,
+        "learning_rate": 1e-6,
         "pretrained_rad_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
         "pretrained_histo_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
         "checkpoint_dir": "./models/ckpts/",
         "log_interval": 1,
         "scheduler": {
-            "type": "reduce_lr_on_plateau",
-            "mode": "min",
-            "factor": 0.1,
-            "patience": 20,
-            "min_lr": 1e-9
+            "type": "cosine_annealing_lr",
+            "T_max": 100,
+            "eta_min": 0.0,
+            "last_epoch": -1
         },
         "early_stopping": {
             "patience": 10,

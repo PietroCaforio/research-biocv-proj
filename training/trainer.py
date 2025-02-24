@@ -279,7 +279,7 @@ def per_class_accuracy(
             accuracies[f"G{i+1}_Acc"] = acc.item()
         else:
             accuracies[f"G{i+1}_Acc"] = 0.0
-    accuracies["Avg_Acc"] = sum(v for k, v in accuracies.items()) / 3.0
+    accuracies["avg_Acc"] = sum(v for k, v in accuracies.items()) / 3.0
     return accuracies
 
 
@@ -357,13 +357,6 @@ def f1_per_class(outputs: torch.Tensor, targets: torch.Tensor) -> Dict[str, floa
     }
 
 
-def accuracy(outputs: torch.Tensor, targets: torch.Tensor) -> Dict[str, float]:
-    """Calculate overall accuracy for all classes combined."""
-    _, predicted = torch.max(outputs, 1)
-    accuracy = (predicted == targets).float().mean()
-    return {"Accuracy": accuracy.item()}
-
-
 class MultimodalTrainer(BaseTrainer):
     """Specific trainer implementation for multimodal CT-WSI learning."""
 
@@ -382,7 +375,6 @@ class MultimodalTrainer(BaseTrainer):
                 "precision": precision_per_class,
                 "recall": recall_per_class,
                 "f1_score": f1_per_class,
-                "avg_accuracy": accuracy,
             }
 
     def process_batch(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:

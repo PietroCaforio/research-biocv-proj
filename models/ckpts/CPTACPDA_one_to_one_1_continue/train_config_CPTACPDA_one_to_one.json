@@ -25,7 +25,7 @@
     "training": {
         "num_epochs": 250,
         "batch_size": 8,
-        "learning_rate": 1e-7,
+        "learning_rate": 1e-6,
         "pretrained_rad_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
         "pretrained_histo_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
         "checkpoint_dir": "./models/ckpts/",
@@ -35,7 +35,7 @@
             "mode": "min",
             "factor": 0.1,
             "patience": 20,
-            "min_lr": 1e-9
+            "min_lr": 1e-8
         },
         "early_stopping": {
             "patience": 10,
