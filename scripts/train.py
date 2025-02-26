@@ -37,6 +37,8 @@ def main():
     args = parse_args()
     config = load_config(args.config)
 
+    if "gpu" in config["training"].keys():
+        torch.cuda.set_device(config["training"]["gpu"])
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -92,7 +94,11 @@ def main():
         pretrained_histo_path=config["training"]["pretrained_histo_path"],
         vol_depth=config["model"]["vol_depth"],
         vol_wh=config["model"]["vol_wh"],
-        backbone_pretrained=True,
+        backbone_pretrained=config["model"]["backbone_pretrained"],
+        backbone_grad=config["model"]["backbone_grad"],  # freeze everything
+        backbone_unfreeze_layers=config["model"][
+            "backbone_unfreeze_layers"
+        ],  # unfreeze some
     )
     model.to(device)
 

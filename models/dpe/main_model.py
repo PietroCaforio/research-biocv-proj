@@ -23,6 +23,7 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
         class_predictor,
         backbone_layers,
         backbone_grad=False,
+        backbone_unfreeze_layers=None,
     ):
         """
         args:
@@ -40,11 +41,20 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
         self.class_predictor = class_predictor
         self.backbone_layers = backbone_layers
 
-        if not backbone_grad:
+        if not backbone_grad:  # Freeze the backbones
             for p in self.rad_backbone.parameters():
                 p.requires_grad_(False)
             for p in self.histo_backbone.parameters():
                 p.requires_grad_(False)
+        if backbone_unfreeze_layers is not None:
+            for name, p in self.rad_backbone.named_parameters():
+                if name.split(".")[0] in backbone_unfreeze_layers:
+                    p.requires_grad_(True)
+                    print(name, "requires grad in rad backbone")
+            for name, p in self.histo_backbone.named_parameters():
+                if name.split(".")[0] in backbone_unfreeze_layers:
+                    p.requires_grad_(True)
+                    print(name, "requires grad in histo backbone")
 
     def forward(self, rad_vols, histo_vols, modality_flag=None):
         """Forward pass
@@ -114,6 +124,8 @@ def madpe_resnet34(
     vol_wh=224,
     pretrained_rad_path="./models/pretrain_weights/r3d34_K_200ep.pth",
     pretrained_histo_path="./models/pretrain_weights/r3d34_K_200ep.pth",
+    backbone_grad=False,
+    backbone_unfreeze_layers=None,
 ):
     # radiology backbone
     rad_backbone_net = resnet3D.generate_model(34, n_input_channels=3, n_classes=700)
@@ -121,14 +133,18 @@ def madpe_resnet34(
     if backbone_pretrained:
         # !conda install -y gdown
         # !gdown --id 1fFN5J2He6eTqMPRl_M9gFtFfpUmhtQc9
-        pretrain = torch.load(
+        pretrain_histo = torch.load(
+            pretrained_histo_path,
+            map_location="cuda:0",
+            weights_only=True,
+        )
+        pretrain_rad = torch.load(
             pretrained_rad_path,
             map_location="cuda:0",
             weights_only=True,
         )
-
-        rad_backbone_net.load_state_dict(pretrain["state_dict"])
-        histo_backbone_net.load_state_dict(pretrain["state_dict"])
+        rad_backbone_net.load_state_dict(pretrain_rad["state_dict"])
+        histo_backbone_net.load_state_dict(pretrain_histo["state_dict"])
         # block_inplanes = get_inplanes()
         # rad_backbone_net.conv1 = nn.Conv3d(1,
         #                        block_inplanes[0],
@@ -141,14 +157,15 @@ def madpe_resnet34(
         # rad_backbone_net.fc = nn.Linear(rad_backbone_net.fc.in_features,3)
 
     # classification
-    class_predictor = DPENet(vol_depth=66, vol_wh=224)
+    class_predictor = DPENet(vol_depth=vol_depth, vol_wh=vol_wh)
 
     net = MADPENet(
         rad_backbone=rad_backbone_net,
         histo_backbone=histo_backbone_net,
         class_predictor=class_predictor,
         backbone_layers=["conv1", "layer1", "layer2", "layer3"],
-        backbone_grad=False,
+        backbone_grad=backbone_grad,
+        backbone_unfreeze_layers=backbone_unfreeze_layers,
     )
     return net
 
@@ -209,7 +226,6 @@ if __name__ == "__main__":
     modality_mask = train_sample["modality_mask"].to(device)
     madpe.eval()
     with torch.no_grad():
-
         madpe(train_ct_vol, train_wsi_vol, modality_flag=modality_mask)
     # madpe = madpe_resnet34()
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

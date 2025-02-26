@@ -1,0 +1,1 @@
+python preprocess_sequences.py --load_args ./presets/CPTAC_PDA_71.csv --destination ../data/processed/processed_CPTAC_PDA_71_3D_sequences/CT/ --target_shape 224 --progress True --sequence_length 16 --pad
