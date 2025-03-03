@@ -343,11 +343,12 @@ def f1_per_class(outputs: torch.Tensor, targets: torch.Tensor) -> Dict[str, floa
         tp[c] = ((targets == c) & (predicted == c)).sum().float()
         fp[c] = ((targets != c) & (predicted == c)).sum().float()
         fn[c] = ((targets == c) & (predicted != c)).sum().float()
-    prec = precision_per_class(outputs, targets)
-    prec = torch.tensor([v for k, v in prec.items()])
-    rec = recall_per_class(outputs, targets)
-    rec = torch.tensor([v for k, v in rec.items()])
-    f1_per_class = 2 * (prec * rec) / (prec + rec + 1e-8)
+
+    # Calculate precision and recall directly
+    precision = tp / (tp + fp + 1e-8)
+    recall = tp / (tp + fn + 1e-8)
+
+    f1_per_class = 2 * (precision * recall) / (precision + recall + 1e-8)
 
     return {
         "F1scoreG1": f1_per_class[0].item(),
@@ -402,7 +403,8 @@ class MultimodalTrainer(BaseTrainer):
         #    "G3_TrainAcc": 0.0,
         # }
         num_batches = len(self.train_loader)
-
+        total_outputs = torch.tensor([], dtype=torch.float32, device=self.device)
+        total_labels = torch.tensor([], dtype=torch.long, device=self.device)
         for batch_idx, batch in enumerate(self.train_loader):
             # Process batch
             batch_data = self.process_batch(batch)
@@ -425,19 +427,14 @@ class MultimodalTrainer(BaseTrainer):
             # Update metrics
             metrics["train_loss"] += loss.item()
 
-            # Compute additional metrics
-            with torch.no_grad():
-                for k, v in self.metric_functions.items():
-                    mtrc = v(outputs, batch_data["labels"])
-                    for kk, vv in mtrc.items():
-                        metrics["train_" + kk] += vv
-
-                # accuracy_metrics = self.metric_functions["accuracy"](
-                #     outputs, batch_data["labels"]
-                # )
-                # class_metrics = self.metric_functions["per_class_accuracy"](
-                #     outputs, batch_data["labels"]
-                # )
+            total_outputs = torch.cat((total_outputs, outputs), dim=0)
+            total_labels = torch.cat((total_labels, batch_data["labels"]), dim=0)
+            # accuracy_metrics = self.metric_functions["accuracy"](
+            #     outputs, batch_data["labels"]
+            # )
+            # class_metrics = self.metric_functions["per_class_accuracy"](
+            #     outputs, batch_data["labels"]
+            # )
             #
             # metrics["train_accuracy"] += accuracy_metrics["accuracy"]
             # for key, value in class_metrics.items():
@@ -450,11 +447,18 @@ class MultimodalTrainer(BaseTrainer):
                     f"Batch [{batch_idx+1}/{num_batches}], "
                     f"Loss: {loss.item():.4f}"
                 )
+
+        # Compute additional metrics
+        with torch.no_grad():
+            for k, v in self.metric_functions.items():
+                mtrc = v(total_outputs, total_labels)
+                for kk, vv in mtrc.items():
+                    metrics["train_" + kk] = vv
         metrics = dict(metrics)
         # Compute averages
-        for key in metrics:
-            metrics[key] /= num_batches
-
+        # for key in metrics:
+        #    metrics[key] /= num_batches
+        metrics["train_loss"] /= num_batches
         return metrics
 
     def validate(self) -> Dict[str, float]:
@@ -469,6 +473,8 @@ class MultimodalTrainer(BaseTrainer):
         #    "G3_ValAcc": 0.0,
         # }
         num_batches = len(self.val_loader)
+        total_outputs = torch.tensor([], dtype=torch.float32, device=self.device)
+        total_labels = torch.tensor([], dtype=torch.long, device=self.device)
 
         with torch.no_grad():
             for batch in self.val_loader:
@@ -488,11 +494,9 @@ class MultimodalTrainer(BaseTrainer):
                 # Update metrics
                 metrics["val_loss"] += loss.item()
 
-                # Compute additional metrics
-                for k, v in self.metric_functions.items():
-                    mtrc = v(outputs, batch_data["labels"])
-                    for kk, vv in mtrc.items():
-                        metrics["val_" + kk] += vv
+                total_outputs = torch.cat((total_outputs, outputs), dim=0)
+                total_labels = torch.cat((total_labels, batch_data["labels"]), dim=0)
+
                 # accuracy_metrics = self.metric_functions["accuracy"](
                 #     outputs, batch_data["labels"]
                 # )
@@ -503,9 +507,16 @@ class MultimodalTrainer(BaseTrainer):
         # metrics["val_accuracy"] += accuracy_metrics["accuracy"]
         # for key, value in class_metrics.items():
         #     metrics[f"{key.replace('Acc', 'ValAcc')}"] += value
+        # Compute additional metrics
+        for k, v in self.metric_functions.items():
+            mtrc = v(total_outputs, total_labels)
+            for kk, vv in mtrc.items():
+                metrics["val_" + kk] = vv
         metrics = dict(metrics)
+
+        metrics["val_loss"] /= num_batches
         # Compute averages
-        for key in metrics:
-            metrics[key] /= num_batches
+        # for key in metrics:
+        #  metrics[key] /= num_batches
 
         return metrics

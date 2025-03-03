@@ -10,6 +10,8 @@ import torch
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
+# import staintools
+
 
 class MultimodalCTWSIDataset(Dataset):
     """
@@ -34,10 +36,17 @@ class MultimodalCTWSIDataset(Dataset):
         pairs_per_patient: int = None,  # For fixed_count_mode
         allow_repeats: bool = False,  # For fixed_count mode
         downsample: bool = False,
+        histo_normalization: str = None,
+        std_target: str = None,
     ):
         super().__init__()
         # assert split in ["train", "val", "overfit", "all"]
-        assert sampling_strategy in ["random", "consecutive", "consecutive-fixed"]
+        assert sampling_strategy in [
+            "random",
+            "consecutive",
+            "consecutive-fixed",
+            "consecutive-seq",
+        ]
         assert pairing_mode in ["all_combinations", "one_to_one", "fixed_count"]
         assert 0 <= missing_modality_prob <= 1
 
@@ -64,7 +73,12 @@ class MultimodalCTWSIDataset(Dataset):
                 .splitlines()
             )
         }
-
+        self.histo_normalization = histo_normalization
+        self.std_target = std_target
+        if self.histo_normalization == "vahadane" and not self.std_target:
+            raise ValueError(
+                "If 'histo_normalization' is set to vahadane, 'std_target' cannot be None"
+            )
         # Initialize data structures
         # Will store CT and WSI paths per patient
         self.patient_data = {}
@@ -72,6 +86,11 @@ class MultimodalCTWSIDataset(Dataset):
         self.samples = []
         self.classfreq = {"G1": 0, "G2": 0, "G3": 0}
         self.modality_stats = {"ct_only": 0, "wsi_only": 0, "both": 0}
+
+        # if self.histo_normalization is not None:
+        #    if self.histo_normalization == "vahadane":
+        #        self.normalizer = staintools.StainNormalizer(method="vahadane")
+        #        self.normalizer.fit(self.std_target)
 
         # Load split file
         self._load_split(split)
@@ -364,7 +383,6 @@ class MultimodalCTWSIDataset(Dataset):
 
         # Sample patches according to strategy
         if len(patch_files) <= self.patches_per_wsi:
-
             selected_patches = patch_files * (self.patches_per_wsi // len(patch_files))
             selected_patches += random.sample(
                 patch_files, self.patches_per_wsi % len(patch_files)
@@ -376,8 +394,13 @@ class MultimodalCTWSIDataset(Dataset):
             selected_patches = patch_files[
                 start_idx : start_idx + self.patches_per_wsi  # noqa E203
             ]
-        else:  # Consecutive - fixed
+        elif self.sampling_strategy == "consecutive-fixed":  # Consecutive - fixed
             start_idx = round((len(patch_files) - self.patches_per_wsi) / 2)
+            selected_patches = patch_files[
+                start_idx : start_idx + self.patches_per_wsi  # noqa E203
+            ]
+        else:  # Consecutive for sequences "consecutive-seq"
+            start_idx = 0
             selected_patches = patch_files[
                 start_idx : start_idx + self.patches_per_wsi  # noqa E203
             ]
@@ -404,8 +427,22 @@ class MultimodalCTWSIDataset(Dataset):
 
     def _process_patch(self, patch_path):
         img = cv2.imread(patch_path)
-        img_np = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        return img_np
+        img_np = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
+        img_normalized = img_np
+        if self.histo_normalization is not None:
+            # if self.histo_normalization == "vahadane":
+            #     img = staintools.LuminosityStandardizer.standardize(img_np)
+            #     img_normalized = self.normalizer.transform(img)
+            if self.histo_normalization == "imagenet":
+                imagenet_mean = np.array(
+                    [0.485 * 255, 0.456 * 255, 0.406 * 255], dtype=np.float32
+                )
+                imagenet_std = np.array(
+                    [0.229 * 255, 0.224 * 255, 0.225 * 255], dtype=np.float32
+                )
+                img_normalized = (img_np - imagenet_mean) / imagenet_std
+        assert isinstance(img, np.ndarray), "img is not a numpy array!"
+        return img_normalized
 
     def _get_empty_ct_volume(self):
         """Return empty CT volume of correct shape"""
@@ -501,7 +538,7 @@ class MultimodalCTWSIDataset(Dataset):
 def test_multimodal_dataset():
     # Initialize dataset
     dataset = MultimodalCTWSIDataset(
-        split="all_balanced",
+        split="train",
         dataset_path="./data/processed/processed_CPTAC_PDA_71_3D",
         patches_per_wsi=66,
         sampling_strategy="consecutive-fixed",
@@ -511,6 +548,8 @@ def test_multimodal_dataset():
         allow_repeats=False,
         pairs_per_patient=None,
         downsample=False,
+        histo_normalization="imagenet",
+        # std_target=".processed/processed_CPTAC_PDA_71_3D/WSI/C3L-00622-21/265.png"
     )
 
     # Print dataset stats

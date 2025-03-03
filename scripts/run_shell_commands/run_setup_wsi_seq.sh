@@ -1,0 +1,1 @@
+python setup_wsi_sequences.py --patch_path ../../cptac_pda_patches_cleaned/CPTAC_PDA_patches_3 --destination ../data/processed/processed_CPTAC_PDA_71_3D_sequences/WSI --patients ../data/processed/processed_CPTAC_PDA_71_3D_sequences/all.txt

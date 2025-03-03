@@ -67,6 +67,7 @@ def main():
         allow_repeats=config["data"]["allow_repeats"],
         pairs_per_patient=config["data"]["pairs_per_patient"],
         downsample=config["data"]["downsample"],
+        histo_normalization=config["data"]["histo_normalization"],
     )
 
     # Create dataloaders
@@ -131,6 +132,7 @@ def main():
         device=device,
         experiment_name=args.experiment_name,
         scheduler=scheduler,
+        early_stopping=config["training"]["early_stopping"],
     )
 
     shutil.copy(

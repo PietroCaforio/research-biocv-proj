@@ -172,17 +172,22 @@ def thread(params):
         i += 1
 
     sl = args.sequence_length
-    for k in range(int(len(occupied_slices) / sl)):
+    saved_flag = False
+    # remove duplicates from occupied slices
+    occupied_slices = list(dict.fromkeys(occupied_slices))
+    for k in range(len(occupied_slices) // sl):
         os.makedirs(os.path.join(output_path, patient_id), exist_ok=True)
-        np.save(
-            os.path.join(output_path, patient_id, "%s.npy" % i),
-            vol[occupied_slices[k * sl : (k + 1) * sl]],  # noqa: E203
-        )
+        path = os.path.join(output_path, patient_id, "%s.npy" % i)
+        seq_vol = vol[occupied_slices[k * sl : (k + 1) * sl]]  # noqa : E203
+        np.save(path, seq_vol)
+        saved_flag = True
+        logging.info(f"saved volume of length {len(seq_vol)} in folder {path}")
         i += 1
-    if args.pad and len(occupied_slices) % sl < int(sl / 2):
-        print(f"padding {patient_id}...")
-        k = int(len(occupied_slices) / sl)
-        rem = len(occupied_slices) % sl
+
+    if args.pad and len(occupied_slices) % sl > int(sl / 2):
+        logging.info(f"padding {patient_id}...")
+        k = len(occupied_slices) // sl
+        rem = 16 - (len(occupied_slices) % sl)
         goal = len(occupied_slices) + rem
         # Oversample slices with nontumor slices for padding
         right_index = max(occupied_slices) + 1
@@ -196,18 +201,24 @@ def thread(params):
                 break
         if len(occupied_slices) == goal:
             os.makedirs(os.path.join(output_path, patient_id), exist_ok=True)
-            print(
-                "saving padded volume: ",
-                os.path.join(output_path, patient_id, "%s.npy" % i),
-            )
+            path = os.path.join(output_path, patient_id, "%s.npy" % i)
+            padded_vol = vol[occupied_slices[k * sl : (k + 1) * sl]]  # noqa : E203
+            logging.info(f"saving padded volume: {path} of length {len(padded_vol)}")
             np.save(
-                os.path.join(output_path, patient_id, "%s.npy" % i),
-                vol[occupied_slices[k * sl : (k + 1) * sl]],  # noqa: E203
+                path,
+                padded_vol,  # noqa: E203
             )
+            saved_flag = True
     with open(f"./progress/progress{args.dataset}seq.txt", "a") as progress_file:
         progress_file.write(row["File Location"] + "\n")
 
-    logging.info(f"Successfully processed patient {patient_id}")
+    if saved_flag:
+        logging.info(f"Successfully processed patient {patient_id}")
+    else:
+        osl = len(occupied_slices)
+        logging.info(
+            f"Patient {patient_id} volume not saved, occupied slices length: {osl}"
+        )
 
     return patient_id, cancer_grade
 

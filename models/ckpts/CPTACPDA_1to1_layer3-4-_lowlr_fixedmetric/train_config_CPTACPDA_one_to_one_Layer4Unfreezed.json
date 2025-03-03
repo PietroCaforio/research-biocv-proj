@@ -15,7 +15,8 @@
         "pairing_mode": "one_to_one",
         "allow_repeats": false,
         "pairs_per_patient": null,
-        "downsample": false
+        "downsample": false,
+        "histo_normalization": null
     },
     "model": {
         "checkpoint_path": "./models/ckpts/",
@@ -34,17 +35,17 @@
         "checkpoint_dir": "./models/ckpts/",
         "log_interval": 1,
         "scheduler": {
-            "type": "cosine_annealing_lr",
-            "T_max": 50,
-            "eta_min": 0.0,
-            "last_epoch": -1
+            "type": "reduce_lr_on_plateau",
+            "mode": "min",
+            "factor": 0.1,
+            "patience": 3,
+            "min_lr": 1e-9
         },
         "early_stopping": {
             "patience": 10,
             "min_delta": 1e-4,
             "mode": "min"
         },
-        "monitor_metric": "val_loss",
-        "gpu":1
+        "monitor_metric": "val_loss"
     }
 }
