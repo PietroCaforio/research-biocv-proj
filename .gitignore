@@ -19,5 +19,6 @@
 !Makefile
 !*.tcia
 !*.json
-# but blacklist wandb directory
+# but blacklist
 wandb/
+data/*/check.py
