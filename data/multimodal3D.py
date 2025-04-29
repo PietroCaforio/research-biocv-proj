@@ -9,9 +9,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-
-# import staintools
-
+import torchstain
+from torchvision import transforms
 
 class MultimodalCTWSIDataset(Dataset):
     """
@@ -38,6 +37,8 @@ class MultimodalCTWSIDataset(Dataset):
         downsample: bool = False,
         histo_normalization: str = None,
         std_target: str = None,
+        augment_minority: bool = False,
+        augmentation_factor: int = 2,
     ):
         super().__init__()
         # assert split in ["train", "val", "overfit", "all"]
@@ -56,7 +57,9 @@ class MultimodalCTWSIDataset(Dataset):
         self.missing_modality_prob = missing_modality_prob
         self.vol_std_method = vol_std_method
         self.require_both_modalities = require_both_modalities
-
+        self.augment_minority = augment_minority  # Flag to enable minority class augmentation
+        self.augmentation_factor = augmentation_factor  # How many times to augment the minority class
+        
         self.pairing_mode = (
             pairing_mode  # 'all_combinations', 'one_to_one', or 'fixed_count'
         )
@@ -75,10 +78,21 @@ class MultimodalCTWSIDataset(Dataset):
         }
         self.histo_normalization = histo_normalization
         self.std_target = std_target
-        if self.histo_normalization == "vahadane" and not self.std_target:
-            raise ValueError(
-                "If 'histo_normalization' is set to vahadane, 'std_target' cannot be None"
-            )
+        if self.histo_normalization == "macenko" :
+            if not self.std_target:
+                raise ValueError(
+                    "If 'histo_normalization' is set to macenko, 'std_target' cannot be None"
+                )
+            self.target = cv2.cvtColor(cv2.imread(self.std_target), cv2.COLOR_BGR2RGB)
+            self.macenko_normalizer = torchstain.normalizers.MacenkoNormalizer(backend="torch")
+            self.macenko_transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Lambda(lambda x: x*255)
+            ])
+            self.macenko_normalizer.fit(self.macenko_transform(self.target))
+            
+            
+        
         # Initialize data structures
         # Will store CT and WSI paths per patient
         self.patient_data = {}
@@ -97,6 +111,15 @@ class MultimodalCTWSIDataset(Dataset):
 
         # Calculate maximum CT depth for standardization
         self.max_ct_depth = self._calculate_max_ct_depth()
+        # Apply augmentation for minority class if enabled
+        if self.augment_minority and "G1" in self.classfreq and self.classfreq["G1"] > 0:
+            self._augment_minority_class()
+        # Define augmentation transforms
+        self.augmentation_transforms = transforms.Compose([
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomVerticalFlip(p=0.5),
+            transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05),
+        ])
 
     def _get_max_pairs_for_patient(self, ct_scans, wsi_folders, allow_repeats):
         """
@@ -163,6 +186,26 @@ class MultimodalCTWSIDataset(Dataset):
             pairs.append((ct_scan, wsi_folder))
 
         return pairs
+    def _augment_minority_class(self):
+        """Augment the minority class (G1) samples"""
+        # Get all G1 samples
+        g1_samples = [sample for sample in self.samples if self.labels[sample["patient_id"]] == "G1"]
+        
+        # Create augmented versions of G1 samples
+        augmented_samples = []
+        for _ in range(self.augmentation_factor - 1):  # -1 because we already have one copy
+            for sample in g1_samples:
+                augmented_sample = sample.copy()
+                augmented_sample["augmented"] = True
+                augmented_samples.append(augmented_sample)
+        
+        # Add augmented samples to the dataset
+        self.samples.extend(augmented_samples)
+        
+        # Update class frequency
+        self.classfreq["G1"] *= self.augmentation_factor
+        
+        print(f"Added {len(augmented_samples)} augmented G1 samples. New G1 frequency: {self.classfreq['G1']}")
 
     def _load_split(self, split):
         """Load and organize all CT and WSI data for the given split
@@ -274,6 +317,7 @@ class MultimodalCTWSIDataset(Dataset):
                                     "ct_path": os.path.join("CT", patient_id, ct_scan),
                                     "wsi_folder": os.path.join("WSI", wsi_folder),
                                     "base_modality_mask": [1, 1],
+                                    "augmented": False,
                                 }
                             )
 
@@ -297,6 +341,7 @@ class MultimodalCTWSIDataset(Dataset):
                                     "ct_path": os.path.join("CT", patient_id, ct_scan),
                                     "wsi_folder": os.path.join("WSI", wsi_folder),
                                     "base_modality_mask": [1, 1],
+                                    "augmented": False,
                                 }
                             )
 
@@ -311,6 +356,7 @@ class MultimodalCTWSIDataset(Dataset):
                                     "ct_path": os.path.join("CT", patient_id, ct_scan),
                                     "wsi_folder": os.path.join("WSI", wsi_folder),
                                     "base_modality_mask": [1, 1],
+                                    "augmented": False,
                                 }
                             )
 
@@ -325,6 +371,7 @@ class MultimodalCTWSIDataset(Dataset):
                                 "ct_path": os.path.join("CT", patient_id, ct_scan),
                                 "wsi_folder": None,
                                 "base_modality_mask": [1, 0],
+                                "augmented": False
                             }
                         )
 
@@ -339,6 +386,7 @@ class MultimodalCTWSIDataset(Dataset):
                                 "ct_path": None,
                                 "wsi_folder": os.path.join("WSI", wsi_folder),
                                 "base_modality_mask": [0, 1],
+                                "augmented": False
                             }
                         )
 
@@ -356,7 +404,7 @@ class MultimodalCTWSIDataset(Dataset):
                 max_depth = max(max_depth, depth)
         return max_depth
 
-    def _load_ct_volume(self, ct_path):
+    def _load_ct_volume(self, ct_path, augment = False):
         """Load and standardize CT volume"""
         volume = np.load(os.path.join(self.dataset_path, ct_path))
         if self.vol_std_method == "padding":
@@ -370,9 +418,27 @@ class MultimodalCTWSIDataset(Dataset):
                     mode="constant",
                     constant_values=0,
                 )
+        volume = (volume - np.min(volume)) / (np.max(volume) - np.min(volume))
+        
+        # Apply CT-specific augmentations if this is an augmented sample
+        if augment:
+            # Add random noise
+            noise = np.random.normal(0, 0.03, volume.shape).astype(volume.dtype)
+            volume = volume + noise
+            
+            # Random intensity shift
+            intensity_shift = np.random.uniform(-0.1, 0.1)
+            volume = volume + intensity_shift
+            
+            # Random contrast adjustment
+            contrast_factor = np.random.uniform(0.9, 1.1)
+            volume = (volume - volume.mean()) * contrast_factor + volume.mean()
+            
+            # Ensure values are within valid range
+            volume = np.clip(volume, volume.min(), volume.max())
         return volume
 
-    def _load_wsi_volume(self, wsi_folder):
+    def _load_wsi_volume(self, wsi_folder, augment=False):
         """Load WSI patches into a volume"""
         patches = []
         patch_files = sorted(
@@ -419,15 +485,18 @@ class MultimodalCTWSIDataset(Dataset):
         ]
 
         # Use ThreadPoolExecutor to process the patches in parallel
-
+        augments = [augment for i in range(len(patch_paths))] 
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            patches = list(executor.map(self._process_patch, patch_paths))
+            patches = list(executor.map(self._process_patch, patch_paths,augments))
+        try:
+            return np.stack(patches, axis=0).transpose(3, 0, 1, 2)
+        except ValueError as e:
+            print("patches:",len(patches))
+            print("patch_paths:",len(patch_paths))
 
-        return np.stack(patches, axis=0).transpose(3, 0, 1, 2)
-
-    def _process_patch(self, patch_path):
+    def _process_patch(self, patch_path, augment=False):
         img = cv2.imread(patch_path)
-        img_np = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
+        img_np = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img_normalized = img_np
         if self.histo_normalization is not None:
             # if self.histo_normalization == "vahadane":
@@ -441,7 +510,28 @@ class MultimodalCTWSIDataset(Dataset):
                     [0.229 * 255, 0.224 * 255, 0.225 * 255], dtype=np.float32
                 )
                 img_normalized = (img_np - imagenet_mean) / imagenet_std
-        assert isinstance(img, np.ndarray), "img is not a numpy array!"
+            if self.histo_normalization == "macenko":
+                if img_np is None or img_np.size == 0:
+                    print("Warning: Empty patch encountered. Skipping...")
+                    return None  # or a default tensor
+                norm, _, _ = self.macenko_normalizer.normalize(I=self.macenko_transform(img_np), stains=True)
+                    
+                
+                img_normalized = norm.byte().numpy()
+                                
+                #norm, _,_ = self.macenko_normalizer.normalize(I=self.macenko_transform(img_np),stains=True)
+        # assert isinstance(img, np.ndarray), "img is not a numpy array!"
+        # Apply augmentations if this is an augmented sample
+        if augment:
+            # Convert to PIL Image for torchvision transforms
+            img_tensor = torch.from_numpy(img_normalized).permute(2, 0, 1).float() / 255.0
+            
+            # Apply random transformation
+            img_tensor = self.augmentation_transforms(img_tensor)
+            
+            # Convert back to numpy array
+            img_normalized = (img_tensor * 255.0).permute(1, 2, 0).byte().numpy()
+        assert img_normalized is not None, f"{patch_path} is None!"
         return img_normalized
 
     def _get_empty_ct_volume(self):
@@ -468,7 +558,7 @@ class MultimodalCTWSIDataset(Dataset):
         sample = self.samples[index]
         patient_id = sample["patient_id"]
         base_mask = sample["base_modality_mask"]
-
+        is_augmented = sample["augmented"]
         # Apply additional random masking only to available modalities
         final_mask = base_mask.copy()
         if self.missing_modality_prob > 0:
@@ -485,13 +575,13 @@ class MultimodalCTWSIDataset(Dataset):
 
         # Load volumes based on final mask
         ct_volume = (
-            self._load_ct_volume(sample["ct_path"])
+            self._load_ct_volume(sample["ct_path"], augment=is_augmented)
             if final_mask[0] and sample["ct_path"]
             else self._get_empty_ct_volume()
         )
 
         wsi_volume = (
-            self._load_wsi_volume(sample["wsi_folder"])
+            self._load_wsi_volume(sample["wsi_folder"], augment=is_augmented)
             if final_mask[1] and sample["wsi_folder"]
             else self._get_empty_wsi_volume()
         )
@@ -505,6 +595,7 @@ class MultimodalCTWSIDataset(Dataset):
             ),
             "modality_mask": torch.tensor(final_mask, dtype=torch.float32),
             "base_modality_mask": torch.tensor(base_mask, dtype=torch.float32),
+            "augmented": torch.tensor(is_augmented, dtype=torch.bool)
         }
 
     def __len__(self):
@@ -512,10 +603,12 @@ class MultimodalCTWSIDataset(Dataset):
 
     def stats(self):
         """Return dataset statistics"""
+        augmented_count = sum(1 for sample in self.samples if sample["augmented"])
         return {
             "total_samples": len(self.samples),
             "total_patients": len(self.patient_data),
             "class_frequency": self.classfreq,
+            "augmented_samples": augmented_count,
             "modality_availability": self.modality_stats,
             "max_ct_depth": self.max_ct_depth,
             "patches_per_wsi": self.patches_per_wsi,
@@ -530,8 +623,98 @@ class MultimodalCTWSIDataset(Dataset):
         batch["wsi_volume"] = batch["wsi_volume"].to(device)
         batch["label"] = batch["label"].to(device)
         batch["modality_mask"] = batch["modality_mask"].to(device)
+        if "augmented" in batch:
+            batch["augmented"] = batch["augmented"].to(device)
 
+class MultimodalBinaryCTWSIDataset(MultimodalCTWSIDataset):
+    num_classes = 3
+    map_classes = {"G2": 0, "G3": 1}
+    
+    def __init__(
+        self,
+        split: str,
+        dataset_path: str,
+        patches_per_wsi: int = 66,
+        sampling_strategy: str = "consecutive",
+        missing_modality_prob: float = 0.0,  # Additional random masking probability
+        vol_std_method: str = None,
+        require_both_modalities: bool = False,  # Whether to only include patients
+        # with both modalities
+        pairing_mode: str = None,  # 'all_combinations, 'one_to_one', 'fixed_count'
+        pairs_per_patient: int = None,  # For fixed_count_mode
+        allow_repeats: bool = False,  # For fixed_count mode
+        downsample: bool = False,
+        histo_normalization: str = None,
+        std_target: str = None,
+    ):
+        # assert split in ["train", "val", "overfit", "all"]
+        assert sampling_strategy in [
+            "random",
+            "consecutive",
+            "consecutive-fixed",
+            "consecutive-seq",
+        ]
+        assert pairing_mode in ["all_combinations", "one_to_one", "fixed_count"]
+        assert 0 <= missing_modality_prob <= 1
 
+        self.dataset_path = dataset_path
+        self.patches_per_wsi = patches_per_wsi
+        self.sampling_strategy = sampling_strategy
+        self.missing_modality_prob = missing_modality_prob
+        self.vol_std_method = vol_std_method
+        self.require_both_modalities = require_both_modalities
+
+        self.pairing_mode = (
+            pairing_mode  # 'all_combinations', 'one_to_one', or 'fixed_count'
+        )
+        self.pairs_per_patient = pairs_per_patient  # For fixed_count mode
+        self.allow_repeats = allow_repeats  # For fixed_count mode
+        self.downsample = downsample
+        # Load labels
+        self.labels = {
+            k.strip(): v.strip()
+            for k, v in (
+                line.split(",")
+                for line in Path(f'{os.path.join(dataset_path, "labelsG23.txt")}')
+                .read_text()
+                .splitlines()
+            )
+        }
+        self.histo_normalization = histo_normalization
+        self.std_target = std_target
+        if self.histo_normalization == "macenko" :
+            if not self.std_target:
+                raise ValueError(
+                    "If 'histo_normalization' is set to macenko, 'std_target' cannot be None"
+                )
+            self.target = cv2.cvtColor(cv2.imread(self.std_target), cv2.COLOR_BGR2RGB)
+            self.macenko_normalizer = torchstain.normalizers.MacenkoNormalizer(backend="torch")
+            self.macenko_transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Lambda(lambda x: x*255)
+            ])
+            self.macenko_normalizer.fit(self.macenko_transform(self.target))
+            
+            
+        
+        # Initialize data structures
+        # Will store CT and WSI paths per patient
+        self.patient_data = {}
+        # Will store all valid combinations
+        self.samples = []
+        self.classfreq = {"G2": 0, "G3": 1}
+        self.modality_stats = {"ct_only": 0, "wsi_only": 0, "both": 0}
+
+        # if self.histo_normalization is not None:
+        #    if self.histo_normalization == "vahadane":
+        #        self.normalizer = staintools.StainNormalizer(method="vahadane")
+        #        self.normalizer.fit(self.std_target)
+
+        # Load split file
+        self._load_split(split)
+
+        # Calculate maximum CT depth for standardization
+        self.max_ct_depth = self._calculate_max_ct_depth()
 # ---------------------------------------------------------------------
 
 
@@ -542,15 +725,17 @@ def test_multimodal_dataset():
         dataset_path="./data/processed/processed_CPTAC_PDA_71_3D",
         patches_per_wsi=66,
         sampling_strategy="consecutive-fixed",
-        missing_modality_prob=0.2,  # 20% chance of each modality being missing
+        missing_modality_prob=0.0,  # 20% chance of each modality being missing
         require_both_modalities=True,
-        pairing_mode="one_to_one",
+        pairing_mode="all_combinations",
         allow_repeats=False,
         pairs_per_patient=None,
         downsample=False,
-        histo_normalization="imagenet",
-        # std_target=".processed/processed_CPTAC_PDA_71_3D/WSI/C3L-00622-21/265.png"
-    )
+        histo_normalization="macenko",
+        std_target="data/processed/processed_CPTAC_PDA_71_3D/WSI/C3L-00625-25/96.png",
+        augment_minority= True,
+        augmentation_factor= 2
+        )
 
     # Print dataset stats
     print("\nDataset Statistics:")
@@ -582,6 +767,51 @@ def test_multimodal_dataset():
     print(f"  Labels: {batch['label'].shape}")
     print(f"  Modality masks: {batch['modality_mask'].shape}")
 
+def test_binary_multimodal_dataset():
+    # Initialize dataset
+    dataset = MultimodalBinaryCTWSIDataset(
+        split="train",
+        dataset_path="./data/processed/processed_CPTAC_PDA_71_3D",
+        patches_per_wsi=66,
+        sampling_strategy="consecutive-fixed",
+        missing_modality_prob=0.0,  # 20% chance of each modality being missing
+        require_both_modalities=True,
+        pairing_mode="all_combinations",
+        allow_repeats=False,
+        pairs_per_patient=None,
+        downsample=False,
+        histo_normalization=None,
+        std_target="data/processed/processed_CPTAC_PDA_71_3D/WSI/C3L-00625-25/96.png",
+    )
 
+    # Print dataset stats
+    print("\nDataset Statistics:")
+    stats = dataset.stats()
+    for key, value in stats.items():
+        print(f"  {key}: {value}")
+
+    # Test a few random samples
+    print("\nTesting random samples:")
+    for i in range(3):
+        idx = random.randint(0, len(dataset) - 1)
+        sample = dataset[idx]
+
+        print(f"\nSample {i + 1}:")
+        print(f"  Patient ID: {sample['patient_id']}")
+        print(f"  CT Volume Shape: {sample['ct_volume'].shape}")
+        print(f"  WSI Volume Shape: {sample['wsi_volume'].shape}")
+        print(f"  Label: {sample['label']}")
+        print(f"  Modality Mask: {sample['modality_mask'].tolist()}")
+
+    # Test DataLoader
+    print("\nTesting DataLoader:")
+    dataloader = DataLoader(dataset, batch_size=2, shuffle=True)
+    batch = next(iter(dataloader))
+
+    print("Batch shapes:")
+    print(f"  CT volumes: {batch['ct_volume'].shape}")
+    print(f"  WSI volumes: {batch['wsi_volume'].shape}")
+    print(f"  Labels: {batch['label'].shape}")
+    print(f"  Modality masks: {batch['modality_mask'].shape}")
 if __name__ == "__main__":
     test_multimodal_dataset()

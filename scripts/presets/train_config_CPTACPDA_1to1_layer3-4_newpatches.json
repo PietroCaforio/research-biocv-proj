@@ -1,0 +1,49 @@
+{
+    "wandb": {
+        "project_name": "multimodal_training1",
+        "name": "CPTACPDA_1to1_layer3-4_unfreezed_reducelr_newpatches"
+    },
+    "data": {
+        "dataset_path": "./data/processed/processed_CPTAC_PDA_71_3D_newpatches/",
+        "patches_per_wsi": 66,
+        "sampling_strategy": "consecutive-fixed",
+        "missing_modality_prob": 0.0,
+        "require_both_modalities": true,
+        "num_workers": 8,
+        "train_split": "train",
+        "val_split": "val",
+        "pairing_mode": "one_to_one",
+        "allow_repeats": false,
+        "pairs_per_patient": null,
+        "downsample": false,
+        "histo_normalization": null,
+        "std_target": null
+    },
+    "model": {
+        "checkpoint_path": "./models/ckpts/",
+        "vol_depth": 66,
+        "vol_wh": 224,
+        "backbone_pretrained": true,
+        "backbone_grad": false,
+        "backbone_unfreeze_layers": ["layer3","layer4"]
+    },
+    "training": {
+        "num_epochs": 500,
+        "batch_size": 8,
+        "learning_rate": 0.8e-6,
+        "pretrained_rad_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
+        "pretrained_histo_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
+        "checkpoint_dir": "./models/ckpts/",
+        "log_interval": 1,
+        "scheduler": {
+            "type": "reduce_lr_on_plateau",
+            "mode": "min",
+            "factor": 0.5,
+            "patience": 10,
+            "min_lr": 1e-8
+        },
+        "early_stopping": null,
+        "monitor_metric": "val_loss",
+        "gpu":0
+    }
+}

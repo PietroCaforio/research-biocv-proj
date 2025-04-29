@@ -1,0 +1,42 @@
+{
+    "num_samples": 53,
+    "feature_shapes": {
+        "classification": [
+            53,
+            3
+        ],
+        "fused_features": [
+            53,
+            64,
+            9,
+            14,
+            14
+        ],
+        "before_classification": [
+            53,
+            256,
+            3,
+            4,
+            4
+        ],
+        "class_layers": [
+            53,
+            2,
+            9,
+            14,
+            14
+        ],
+        "positional_embeddings": [
+            53,
+            64,
+            9,
+            14,
+            14
+        ]
+    },
+    "label_distribution": {
+        "0": 16,
+        "1": 23,
+        "2": 14
+    }
+}

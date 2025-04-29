@@ -33,5 +33,4 @@ if __name__ == "__main__":
     # Visualize the 3D volume
     ct_scan = np.load(choose_random_file(args.folder_path))
     mlab.contour3d(ct_scan)
-
-    mlab.show()
+    mlab.savefig(filename="../prova.png")

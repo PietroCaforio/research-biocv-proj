@@ -1,7 +1,7 @@
 {
     "wandb": {
-        "project_name": "multimodal_training",
-        "name": "CPTACPDA_seq_1to1"
+        "project_name": "multimodal_training_seq",
+        "name": "CPTACPDA_seq_1to1_reduce_lr"
     },
     "data": {
         "dataset_path": "./data/processed/processed_CPTAC_PDA_71_3D_sequences/",
@@ -16,7 +16,7 @@
         "allow_repeats": false,
         "pairs_per_patient": null,
         "downsample": false,
-        "histo_normalization": "imagenet"
+        "histo_normalization": null
     },
     "model": {
         "checkpoint_path": "./models/ckpts/",
@@ -24,12 +24,12 @@
         "vol_wh": 224,
         "backbone_pretrained": true,
         "backbone_grad": false,
-        "backbone_unfreeze_layers": null
+        "backbone_unfreeze_layers": ["layer3","layer4"]
     },
     "training": {
         "num_epochs": 500,
         "batch_size": 8,
-        "learning_rate": 0.5e-5,
+        "learning_rate": 1e-7,
         "pretrained_rad_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
         "pretrained_histo_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
         "checkpoint_dir": "./models/ckpts/",
@@ -41,11 +41,7 @@
             "patience": 20,
             "min_lr": 1e-9
         },
-        "early_stopping": {
-            "patience": 10,
-            "min_delta": 1e-4,
-            "mode": "min"
-        },
+        "early_stopping": null,
         "monitor_metric": "val_loss",
         "gpu":0
     }

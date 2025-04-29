@@ -1,0 +1,1 @@
+python scripts/test_model.py --ckpt ./models/ckpts/CPTACPDA_all_combs_unfreezed/CPTACPDA_all_combs_unfreezed_latest.pth --out_dir ./scripts/test_out/ --config ./scripts/presets/test_config.json --output_layers classification fused_features before_classification

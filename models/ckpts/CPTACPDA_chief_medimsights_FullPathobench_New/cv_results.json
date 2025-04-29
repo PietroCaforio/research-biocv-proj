@@ -1,0 +1,57 @@
+{
+    "fold_results": [
+        {
+            "fold": 0,
+            "num_train_samples": 218,
+            "num_test_samples": 41,
+            "best_metrics": {
+                "val_cindex": 0.6235668789808917,
+                "val_loss": 0.6030325541893641
+            }
+        },
+        {
+            "fold": 1,
+            "num_train_samples": 200,
+            "num_test_samples": 59,
+            "best_metrics": {
+                "val_cindex": 0.7571163366336634,
+                "val_loss": 0.5208298861980438
+            }
+        },
+        {
+            "fold": 2,
+            "num_train_samples": 206,
+            "num_test_samples": 53,
+            "best_metrics": {
+                "val_cindex": 0.6799847792998478,
+                "val_loss": 0.4849601462483406
+            }
+        },
+        {
+            "fold": 3,
+            "num_train_samples": 209,
+            "num_test_samples": 50,
+            "best_metrics": {
+                "val_cindex": 0.6709511568123393,
+                "val_loss": 0.3602256551384926
+            }
+        },
+        {
+            "fold": 4,
+            "num_train_samples": 203,
+            "num_test_samples": 56,
+            "best_metrics": {
+                "val_cindex": 0.6025204359673024,
+                "val_loss": 0.4772377982735634
+            }
+        }
+    ],
+    "mean_metrics": {
+        "val_cindex": 0.6668279175388089,
+        "val_loss": 0.48925720800956085
+    },
+    "std_metrics": {
+        "val_cindex": 0.05357064938813642,
+        "val_loss": 0.07842669952615422
+    }
+}

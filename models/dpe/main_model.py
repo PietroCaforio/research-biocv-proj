@@ -50,13 +50,13 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
             for name, p in self.rad_backbone.named_parameters():
                 if name.split(".")[0] in backbone_unfreeze_layers:
                     p.requires_grad_(True)
-                    print(name, "requires grad in rad backbone")
+                    # print(name, "requires grad in rad backbone")
             for name, p in self.histo_backbone.named_parameters():
                 if name.split(".")[0] in backbone_unfreeze_layers:
                     p.requires_grad_(True)
-                    print(name, "requires grad in histo backbone")
+                    # print(name, "requires grad in histo backbone")
 
-    def forward(self, rad_vols, histo_vols, modality_flag=None):
+    def forward(self, rad_vols, histo_vols, modality_flag=None, output_layers=["classification"]):
         """Forward pass
         Note: If the training is done in sequence mode, that is, test_imgs.dim() == 5,
         then the batch dimension corresponds to the first dimensions.
@@ -71,9 +71,8 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
         rad_feat = [feat for feat in rad_feat.values()]
         histo_feat = self.extract_histo_backbone_features(histo_vols[histo_mask])
         histo_feat = [feat for feat in histo_feat.values()]
-
         class_prediction = self.class_predictor(
-            rad_feat, histo_feat, rad_mask, histo_mask
+            rad_feat, histo_feat, rad_mask, histo_mask, output_layers
         )
 
         return class_prediction
@@ -119,6 +118,7 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
 
 # @model_constructor
 def madpe_resnet34(
+    device,
     backbone_pretrained=True,
     vol_depth=66,
     vol_wh=224,
@@ -126,6 +126,10 @@ def madpe_resnet34(
     pretrained_histo_path="./models/pretrain_weights/r3d34_K_200ep.pth",
     backbone_grad=False,
     backbone_unfreeze_layers=None,
+    num_classes = 3,
+    d_model=64,
+    dim_hider=256,
+    nhead=8
 ):
     # radiology backbone
     rad_backbone_net = resnet3D.generate_model(34, n_input_channels=3, n_classes=700)
@@ -135,12 +139,12 @@ def madpe_resnet34(
         # !gdown --id 1fFN5J2He6eTqMPRl_M9gFtFfpUmhtQc9
         pretrain_histo = torch.load(
             pretrained_histo_path,
-            map_location="cuda:0",
+            map_location=device,
             weights_only=True,
         )
         pretrain_rad = torch.load(
             pretrained_rad_path,
-            map_location="cuda:0",
+            map_location=device,
             weights_only=True,
         )
         rad_backbone_net.load_state_dict(pretrain_rad["state_dict"])
@@ -157,7 +161,7 @@ def madpe_resnet34(
         # rad_backbone_net.fc = nn.Linear(rad_backbone_net.fc.in_features,3)
 
     # classification
-    class_predictor = DPENet(vol_depth=vol_depth, vol_wh=vol_wh)
+    class_predictor = DPENet(vol_depth=vol_depth, vol_wh=vol_wh, num_classes=num_classes, d_model=d_model,dim_hider=dim_hider, nhead=nhead)
 
     net = MADPENet(
         rad_backbone=rad_backbone_net,
@@ -197,15 +201,22 @@ def madpe_resnet34(
 
 
 if __name__ == "__main__":
-    madpe = madpe_resnet34()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    madpe = madpe_resnet34(device)
     madpe.to(device)
     train_multimode_dataset = MultimodalCTWSIDataset(
         split="train",
         dataset_path="./data/processed/processed_CPTAC_PDA_71_3D",
         patches_per_wsi=66,
-        sampling_strategy="consecutive",
-        missing_modality_prob=1.0,
+        sampling_strategy="consecutive-fixed",
+        missing_modality_prob=0.0,  # 20% chance of each modality being missing
+        require_both_modalities=True,
+        pairing_mode="all_combinations",
+        allow_repeats=False,
+        pairs_per_patient=None,
+        downsample=False,
+        histo_normalization="macenko",
+        std_target="data/processed/processed_CPTAC_PDA_71_3D/WSI/C3L-00625-25/96.png"
     )
 
     # Create dataloaders
