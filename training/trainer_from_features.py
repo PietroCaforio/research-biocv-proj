@@ -8,8 +8,9 @@ from typing import Dict
 from typing import Optional
 
 import torch
-from torch.utils.data import DataLoader
 import torch.nn.functional as F
+from torch.utils.data import DataLoader
+
 import wandb
 
 sys.path.insert(0, "./")
@@ -18,8 +19,13 @@ from torch.utils.data import DataLoader  # noqa E402
 from data.multimodal3D import MultimodalCTWSIDataset  # noqa E402
 from models.dpe.main_model import madpe_resnet34  # noqa E402
 
-from .trainer import BaseTrainer, per_class_accuracy, precision_per_class, recall_per_class, f1_per_class
-
+from .trainer import (
+    BaseTrainer,
+    per_class_accuracy,
+    precision_per_class,
+    recall_per_class,
+    f1_per_class,
+)
 
 
 class FromFeaturesTrainer(BaseTrainer):
@@ -45,9 +51,7 @@ class FromFeaturesTrainer(BaseTrainer):
     def process_batch(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Process a batch of multimodal data."""
         return {
-            "ct_feat": batch["ct_feature"]
-            .float()
-            .to(self.device),
+            "ct_feat": batch["ct_feature"].float().to(self.device),
             "wsi_feat": batch["wsi_feature"].float().to(self.device),
             "labels": batch["label"].to(self.device),
             "modality_mask": batch["modality_mask"].to(self.device),
@@ -77,13 +81,22 @@ class FromFeaturesTrainer(BaseTrainer):
                 batch_data["ct_feat"],
                 batch_data["wsi_feat"],
                 modality_flag=batch_data["modality_mask"],
-                output_layers = ["classification", "adapted_rad", "adapted_histo"]
+                output_layers=["classification", "adapted_rad", "adapted_histo"],
             )
 
             # Compute loss
             loss = self.criterion(outputs["classification"], batch_data["labels"])
-            loss = loss + 0.1 * (1 - F.cosine_similarity(outputs["adapted_rad"], outputs["adapted_histo"])).mean()
-            
+            loss = (
+                loss
+                + 0.1
+                * (
+                    1
+                    - F.cosine_similarity(
+                        outputs["adapted_rad"], outputs["adapted_histo"]
+                    )
+                ).mean()
+            )
+
             # Backward pass
             loss.backward()
             self.optimizer.step()

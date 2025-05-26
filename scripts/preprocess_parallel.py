@@ -119,11 +119,11 @@ def thread(params):
     cancer_grade_df = annotations.loc[annotations["Case Submitter ID"] == patient_id][
         "Tumor Grade"
     ]
-    #if cancer_grade_df.empty:
+    # if cancer_grade_df.empty:
     #    logging.warning(f"No annotation available for patient {patient_id}. Skipped.")
     #    return None
 
-    #cancer_grade = cancer_grade_df.iloc[0]  # label
+    # cancer_grade = cancer_grade_df.iloc[0]  # label
     cancer_grade = None
     volume_folder = volume_folder.iloc[0]
     # print(volume_folder)
@@ -272,7 +272,7 @@ def main(args):
         }
         for index, row in segmentations.iterrows()
     ]
-    
+
     print(rows)
     if args.debug:
         results = []

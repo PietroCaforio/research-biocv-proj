@@ -5,14 +5,14 @@ from itertools import product
 from pathlib import Path
 
 import cv2
+import h5py
 import numpy as np
 import torch
+import torchstain
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-import torchstain
 from torchvision import transforms
 
-import h5py
 
 class MultimodalCTWSIDataset(Dataset):
     """
@@ -39,7 +39,7 @@ class MultimodalCTWSIDataset(Dataset):
     ):
         super().__init__()
         # assert split in ["train", "val", "overfit", "all"]
-        
+
         assert pairing_mode in ["all_combinations", "one_to_one", "fixed_count"]
         assert 0 <= missing_modality_prob <= 1
 
@@ -75,7 +75,6 @@ class MultimodalCTWSIDataset(Dataset):
         # Load split file
         self._load_split(split)
 
-        
     def _get_max_pairs_for_patient(self, ct_scans, wsi_folders, allow_repeats):
         """
         Calculate maximum possible pairs for a patient based on available data and pairing mode.
@@ -208,14 +207,12 @@ class MultimodalCTWSIDataset(Dataset):
 
                 # Find all WSI .h5 files for this patient
                 wsi_path = self.wsi_path
-                wsi_features = [
-                    f
-                    for f in os.listdir(wsi_path)
-                    if patient_id in f
-                ]
+                wsi_features = [f for f in os.listdir(wsi_path) if patient_id in f]
 
                 # Skip patient if we require both modalities and they don't have them
-                if self.require_both_modalities and (not ct_features or not wsi_features):
+                if self.require_both_modalities and (
+                    not ct_features or not wsi_features
+                ):
                     continue
 
                 # Store available data for this patient
@@ -249,8 +246,12 @@ class MultimodalCTWSIDataset(Dataset):
                             self.samples.append(
                                 {
                                     "patient_id": patient_id,
-                                    "ct_path": os.path.join(self.ct_path, patient_id, ct_feature),
-                                    "wsi_folder": os.path.join(self.wsi_path, wsi_feature),
+                                    "ct_path": os.path.join(
+                                        self.ct_path, patient_id, ct_feature
+                                    ),
+                                    "wsi_folder": os.path.join(
+                                        self.wsi_path, wsi_feature
+                                    ),
                                     "base_modality_mask": [1, 1],
                                 }
                             )
@@ -272,22 +273,32 @@ class MultimodalCTWSIDataset(Dataset):
                             self.samples.append(
                                 {
                                     "patient_id": patient_id,
-                                    "ct_path": os.path.join(self.ct_path, patient_id, ct_feature),
-                                    "wsi_feature": os.path.join(self.wsi_path, wsi_feature),
+                                    "ct_path": os.path.join(
+                                        self.ct_path, patient_id, ct_feature
+                                    ),
+                                    "wsi_feature": os.path.join(
+                                        self.wsi_path, wsi_feature
+                                    ),
                                     "base_modality_mask": [1, 1],
                                 }
                             )
 
                     else:  # 'all_combinations' mode
-                        for ct_feature, wsi_feature in product(ct_features, wsi_features):
+                        for ct_feature, wsi_feature in product(
+                            ct_features, wsi_features
+                        ):
                             if cnt >= ub and self.downsample:
                                 break
                             cnt += 1
                             self.samples.append(
                                 {
                                     "patient_id": patient_id,
-                                    "ct_path": os.path.join(self.ct_path, patient_id, ct_feature),
-                                    "wsi_feature": os.path.join(self.wsi_path, wsi_feature),
+                                    "ct_path": os.path.join(
+                                        self.ct_path, patient_id, ct_feature
+                                    ),
+                                    "wsi_feature": os.path.join(
+                                        self.wsi_path, wsi_feature
+                                    ),
                                     "base_modality_mask": [1, 1],
                                 }
                             )
@@ -300,7 +311,9 @@ class MultimodalCTWSIDataset(Dataset):
                         self.samples.append(
                             {
                                 "patient_id": patient_id,
-                                "ct_path": os.path.join(self.ct_path, patient_id, ct_feature),
+                                "ct_path": os.path.join(
+                                    self.ct_path, patient_id, ct_feature
+                                ),
                                 "wsi_feature": None,
                                 "base_modality_mask": [1, 0],
                             }
@@ -332,14 +345,14 @@ class MultimodalCTWSIDataset(Dataset):
     def _load_wsi_feature(self, wsi_path):
         """Load WSI feature"""
         feature = None
-        with h5py.File(wsi_path,"r") as f:
-            feature = np.array(f["features"][:])            
+        with h5py.File(wsi_path, "r") as f:
+            feature = np.array(f["features"][:])
 
         return feature
 
     def _get_empty_ct_feature(self):
         """Return empty CT feature of correct shape"""
-        return np.zeros((66,1024))
+        return np.zeros((66, 1024))
 
     def _get_empty_wsi_feature(self):
         """Return empty WSI feature of correct shape"""
@@ -420,6 +433,7 @@ class MultimodalCTWSIDataset(Dataset):
         batch["wsi_feature"] = batch["wsi_feature"].to(device)
         batch["label"] = batch["label"].to(device)
         batch["modality_mask"] = batch["modality_mask"].to(device)
+
 
 # ---------------------------------------------------------------------
 

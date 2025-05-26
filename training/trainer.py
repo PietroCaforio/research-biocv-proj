@@ -17,15 +17,17 @@ sys.path.insert(0, "./")
 from torch.utils.data import DataLoader  # noqa E402
 from data.multimodal3D import MultimodalCTWSIDataset  # noqa E402
 from models.dpe.main_model import madpe_resnet34  # noqa E402
-from .metrics import per_class_accuracy,\
-                precision_per_class,\
-                recall_per_class,\
-                f1_per_class,\
-                per_class_accuracy_binary,\
-                precision_per_class_binary,\
-                recall_per_class_binary,\
-                f1_per_class_binary
-                
+from .metrics import (
+    per_class_accuracy,
+    precision_per_class,
+    recall_per_class,
+    f1_per_class,
+    per_class_accuracy_binary,
+    precision_per_class_binary,
+    recall_per_class_binary,
+    f1_per_class_binary,
+)
+
 
 class BaseTrainer:
     """Flexible base trainer class that handles configurable training functionality."""
@@ -43,7 +45,7 @@ class BaseTrainer:
         scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
         early_stopping: Optional[Dict] = None,
         metric_functions: Optional[Dict[str, Callable]] = None,
-        n_validations: int = None
+        n_validations: int = None,
     ):
         self.model = model
         self.train_loader = train_loader
@@ -52,9 +54,9 @@ class BaseTrainer:
         self.optimizer = optimizer
         self.config = config
         self.device = device
-        self.experiment_name = experiment_name.replace("/","_")
+        self.experiment_name = experiment_name.replace("/", "_")
         self.scheduler = scheduler
-        self.n_validations = n_validations 
+        self.n_validations = n_validations
         # Early stopping configuration
         self.early_stopping_config = early_stopping or {}
         self.early_stopping_counter = 0
@@ -63,7 +65,7 @@ class BaseTrainer:
             if self.early_stopping_config.get("mode") == "min"
             else float("-inf")
         )
-        
+
         # Metric functions for tracking
         self.metric_functions = metric_functions or {}
 
@@ -88,11 +90,10 @@ class BaseTrainer:
             self.config["training"]["checkpoint_dir"] + self.experiment_name
         )
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
-        
+
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(levelname)s - %(message)s",
-             
             handlers=[
                 logging.FileHandler(
                     self.checkpoint_dir / f"{self.experiment_name}.log"
@@ -175,7 +176,9 @@ class BaseTrainer:
             torch.save(checkpoint, best_path)
             self.logger.info(f"Saved best model checkpoint to {best_path}")
         elif is_best:
-            best_path = self.checkpoint_dir / f"{self.experiment_name}_best_val_loss.pth"
+            best_path = (
+                self.checkpoint_dir / f"{self.experiment_name}_best_val_loss.pth"
+            )
             torch.save(checkpoint, best_path)
             self.logger.info(f"Saved best model checkpoint to {best_path}")
 
@@ -243,18 +246,19 @@ class BaseTrainer:
                 self.logger.info("Detected NaN values, training stopped.")
                 break
             # Validation phase
-            if self.n_validations == None: 
+            if self.n_validations == None:
                 val_metrics = self.validate()
-            else: 
+            else:
                 val_metrics_list = []
                 for i in range(self.n_validations):
                     val_metrics_list.append(self.validate())
-                
+
                 # Calculate the average for each metric
                 val_metrics = {}
                 for metric_name in val_metrics_list[0].keys():
-                    val_metrics[metric_name] = sum(d[metric_name] for d in val_metrics_list) / len(val_metrics_list)
-                            
+                    val_metrics[metric_name] = sum(
+                        d[metric_name] for d in val_metrics_list
+                    ) / len(val_metrics_list)
 
             # Combine metrics and log
             epoch_metrics = {**train_metrics, **val_metrics}
@@ -278,19 +282,14 @@ class BaseTrainer:
             # Check early stopping
             if self.check_early_stopping(monitor_metric):
                 break
-            is_best_loss = (
-                val_loss < self.best_val_loss
-            )
+            is_best_loss = val_loss < self.best_val_loss
             if is_best_loss:
                 self.best_val_loss = val_loss
             self.save_checkpoint(is_best_loss)
             self.save_checkpoint(is_best, val_loss=False)
-            
-            
+
             self.logger.info(f"Best monitor metric: {self.best_monitor_metric}")
             self.logger.info(f"Best monitor metric: {self.best_monitor_metric}")
-            
-            
 
             # Log epoch summary
             self.logger.info(
@@ -300,10 +299,8 @@ class BaseTrainer:
         wandb.finish()
         return {
             self.config["training"]["monitor_metric"]: self.best_monitor_metric,
-            "val_loss": self.best_val_loss
-            }
-        
-
+            "val_loss": self.best_val_loss,
+        }
 
 
 class MultimodalTrainer(BaseTrainer):

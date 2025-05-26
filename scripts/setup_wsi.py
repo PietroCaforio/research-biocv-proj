@@ -2,12 +2,13 @@
 import argparse
 import logging
 import os
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
 
 import h5py
-import re
+
 # Internal imports
 sys.path.insert(0, "../")  # noqa: E402
 from util.data_util import read_wsi  # noqa: E402
@@ -30,27 +31,28 @@ def setup_logging():
     logging.getLogger().addHandler(console)
     logging.info("Logging setup complete.")
 
+
 def parse_log_file(log_file_path):
     """
     Parse a log file and extract the names of slides that are marked as 'done'.
-    
+
     Args:
         log_file_path (str): Path to the log file
-        
+
     Returns:
         list: List of slide names that have been processed
     """
     # Regular expression to match completed slides
-    done_pattern = re.compile(r'\[INFO\] \(\d+\) done (.*?)\.svs\.')
-    
+    done_pattern = re.compile(r"\[INFO\] \(\d+\) done (.*?)\.svs\.")
+
     # Regular expression to match skipped slides
-    skipped_pattern = re.compile(r'\[INFO\] (.*?) not in patients file, skipped\.')
-    already_done_pattern = re.compile(r'\[INFO\] (.*?) already done, skipped\.')
+    skipped_pattern = re.compile(r"\[INFO\] (.*?) not in patients file, skipped\.")
+    already_done_pattern = re.compile(r"\[INFO\] (.*?) already done, skipped\.")
     completed_slides = []
     skipped_slides = []
-    
+
     try:
-        with open(log_file_path, 'r') as log_file:
+        with open(log_file_path) as log_file:
             for line in log_file:
                 # Check for completed slides
                 done_match = done_pattern.search(line)
@@ -58,24 +60,26 @@ def parse_log_file(log_file_path):
                     slide_name = done_match.group(1)
                     completed_slides.append(slide_name)
                     continue
-                
+
                 # Check for skipped slides
                 skipped_match = skipped_pattern.search(line)
                 if skipped_match:
                     slide_name = skipped_match.group(1)
                     skipped_slides.append(slide_name)
-                #Check for already done slides
+                # Check for already done slides
                 already_done_match = already_done_pattern.search(line)
                 if already_done_match:
                     slide_name = already_done_match.group(1)
                     completed_slides.append(slide_name)
-                    
+
         print(f"Found {len(completed_slides)} completed slides")
         if skipped_slides:
-            print(f"Found {len(skipped_slides)} skipped slides: {', '.join(skipped_slides)}")
-            
+            print(
+                f"Found {len(skipped_slides)} skipped slides: {', '.join(skipped_slides)}"
+            )
+
         return completed_slides
-    
+
     except FileNotFoundError:
         print(f"Error: Log file '{log_file_path}' not found.")
         return []
@@ -83,9 +87,10 @@ def parse_log_file(log_file_path):
         print(f"Error parsing log file: {e}")
         return []
 
+
 def main(args):
     done_slides = parse_log_file("./logs/setup_wsi_log_20250312_223527.log")
-    
+
     n_slides_done = 0
     patients = Path(args.patients).read_text().splitlines()
     for svs_file in os.listdir(args.raw_path):

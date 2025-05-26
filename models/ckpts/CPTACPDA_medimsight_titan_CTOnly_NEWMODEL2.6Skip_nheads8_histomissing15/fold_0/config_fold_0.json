@@ -7,7 +7,7 @@
         "ct_path": "../MedImageInsights/embeddings_output_cptacpda_93",
         "wsi_path": "../../TitanCPTACPDA/20x_512px_0px_overlap/slide_features_titan",
         "labels_splits_path": "./data/processed/processed_CPTAC_PDA_survival/k=all.tsv",
-        "missing_modality_prob":0.45,
+        "missing_modality_prob":0.15,
         "require_both_modalities":true,
         "pairing_mode":"one_to_one",
         "allow_repeats":true,

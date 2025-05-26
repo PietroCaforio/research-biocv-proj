@@ -16,16 +16,15 @@ from collections import OrderedDict
 import torch.nn.functional as F
 
 
-
 class DynamicPositionalEmbedding(nn.Module):
-    def __init__(self, in_channels, out_channels, topk_pos= 6, topk_neg= 6):
+    def __init__(self, in_channels, out_channels, topk_pos=6, topk_neg=6):
         super().__init__()
-        self.mlp = nn.Sequential(nn.Linear(in_channels*2, out_channels))
+        self.mlp = nn.Sequential(nn.Linear(in_channels * 2, out_channels))
         # Learnable token for missing modality
         self.missing_modality_token = nn.Parameter(torch.zeros(1, out_channels))
         self.topk_pos = topk_pos
         self.topk_neg = topk_neg
-        
+
     def forward(self, f_rad, f_histo, rad_mask, histo_mask):
         """
         Args:
@@ -34,22 +33,20 @@ class DynamicPositionalEmbedding(nn.Module):
         Returns:
             torch.Tensor: Adjusted positional embedding [B, C, H, W].
         """
-        
+
         pred_pos, pred_neg = self._correlation(f_rad, f_histo)
-        
+
         # print(pred_pos.shape,pred_neg.shape)
         # concatenate maps
-        class_layers = torch.cat(
-            [pred_pos, pred_neg], dim=1
-        )
-        
+        class_layers = torch.cat([pred_pos, pred_neg], dim=1)
+
         modality_flags = ~torch.min(
             rad_mask, histo_mask
         )  # 1 when sample contains missing modality
 
         # Flatten input for MLP
         pos_input_flat = class_layers.view(class_layers.size(0), -1)
-        
+
         # Al posto di un'mlp dovrei utilizzare qualche rete convoluzionale per mantenere informazioni spaziali nei positional embedding forse
         pos_embedding = self.mlp(pos_input_flat)
         # Adjust positional embedding with the missing modality token
@@ -59,6 +56,7 @@ class DynamicPositionalEmbedding(nn.Module):
 
         # Reshape back to spatial dimensions
         return adjusted_embedding
+
     # correlation operation
     def _correlation(self, f_rad, f_histo):
 
@@ -67,8 +65,7 @@ class DynamicPositionalEmbedding(nn.Module):
 
         # klv - mnw is the pair of coordinates of the volume sections
         # on which the similarity is calculated
-        
-        
+
         # L'idea è di avere ancora 66 X 1024 nella radiologia e quindi l'operazione sarebbe:
         # bij,bk -> bik ?? o magari bijk, sarebbe semplicemente più fine grained diciamo
         sim = torch.einsum(
@@ -76,25 +73,29 @@ class DynamicPositionalEmbedding(nn.Module):
             F.normalize(f_rad, p=2, dim=1),
             F.normalize(f_histo, p=2, dim=1),
         )
-        
-        
-        
+
         sim = sim.unsqueeze(1)
-        #sim_resh = sim.view(sim.shape[0], sim.shape[1], sim.shape[2]*sim.shape[3])
-        #print(sim_resh.shape)
-        
+        # sim_resh = sim.view(sim.shape[0], sim.shape[1], sim.shape[2]*sim.shape[3])
+        # print(sim_resh.shape)
+
         pos_map = torch.mean(torch.topk(sim, self.topk_pos, dim=-1).values, dim=-1)
-        neg_map = torch.mean(
-            torch.topk(-sim, self.topk_neg, dim=-1).values, dim=-1
-        )
+        neg_map = torch.mean(torch.topk(-sim, self.topk_neg, dim=-1).values, dim=-1)
         return pos_map, neg_map
+
+
 # attention based feature fusion network
 class fusion_layer(nn.Module):
     def __init__(self, d_model=64, dim_hider=256, nhead=8, dropout=0.1):
         super().__init__()
-        self.cross_att1 = torch.nn.MultiheadAttention(embed_dim=d_model,num_heads=nhead,dropout=dropout)
-        self.cross_att2 = torch.nn.MultiheadAttention(embed_dim=d_model,num_heads=nhead,dropout=dropout)
-        self.cross_att3 = torch.nn.MultiheadAttention(embed_dim=d_model,num_heads=nhead,dropout=dropout)
+        self.cross_att1 = torch.nn.MultiheadAttention(
+            embed_dim=d_model, num_heads=nhead, dropout=dropout
+        )
+        self.cross_att2 = torch.nn.MultiheadAttention(
+            embed_dim=d_model, num_heads=nhead, dropout=dropout
+        )
+        self.cross_att3 = torch.nn.MultiheadAttention(
+            embed_dim=d_model, num_heads=nhead, dropout=dropout
+        )
 
     def forward(self, f1, f2, pos):
         fv, fv_weights = self.cross_att1(f1, f2, f2 + pos)
@@ -104,16 +105,18 @@ class fusion_layer(nn.Module):
 
         return f22
 
+
 class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nome
     """Classification network module"""
+
     def __init__(
         self,
-        rad_input_dim = 1024,
-        histo_input_dim = 512,
-        inter_dim = 512,
-        token_dim = 256,
-        dim_hider = 256, # For the attention fusion
-        num_classes = 3
+        rad_input_dim=1024,
+        histo_input_dim=512,
+        inter_dim=512,
+        token_dim=256,
+        dim_hider=256,  # For the attention fusion
+        num_classes=3,
     ):
         """
         args:
@@ -131,20 +134,30 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
         self.token_dim = token_dim
         self.num_classes = num_classes
         self.dim_hider = dim_hider
-        
+
         self.rad_adapter = nn.Sequential(
-            nn.Conv1d(in_channels=self.rad_input_dim, out_channels=self.inter_dim, kernel_size = 3, stride=1, padding=1),
+            nn.Conv1d(
+                in_channels=self.rad_input_dim,
+                out_channels=self.inter_dim,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+            ),
             nn.ReLU(),
             nn.Dropout(0.1),
             nn.BatchNorm1d(self.inter_dim),
-            
-            nn.Conv1d(in_channels=self.inter_dim, out_channels=self.inter_dim, kernel_size = 3, stride=1, padding = 1),
+            nn.Conv1d(
+                in_channels=self.inter_dim,
+                out_channels=self.inter_dim,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+            ),
             nn.ReLU(),
             nn.Dropout(0.1),
             nn.BatchNorm1d(self.inter_dim),
- 
         )
-        
+
         self.histo_adapter = nn.Sequential(
             nn.Linear(self.histo_input_dim, self.inter_dim),
             nn.GELU(),
@@ -155,55 +168,53 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
             nn.Linear(self.inter_dim, self.inter_dim),
             nn.LayerNorm(self.inter_dim),
         )
-        
-        self.missing_rad_token = nn.Parameter(
-            torch.randn(
-                1,
-                self.inter_dim,
-                66
-            )
-        )
+
+        self.missing_rad_token = nn.Parameter(torch.randn(1, self.inter_dim, 66))
         self.missing_histo_token = nn.Parameter(
             torch.randn(
                 1,
                 self.inter_dim,
             )
         )
-        
-        self.missing_rad_token_fusion = nn.Parameter(
-            torch.randn(
-                1,
-                self.token_dim
-            )
-        ) 
+
+        self.missing_rad_token_fusion = nn.Parameter(torch.randn(1, self.token_dim))
         self.missing_histo_token_fusion = nn.Parameter(
             torch.randn(
                 1,
                 self.token_dim,
             )
-        ) 
-        
+        )
+
         self.token_adapt_rad = nn.Sequential(
-            nn.Conv1d(in_channels=self.rad_input_dim, out_channels=self.inter_dim, kernel_size = 3, stride=1, padding=1),
+            nn.Conv1d(
+                in_channels=self.rad_input_dim,
+                out_channels=self.inter_dim,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+            ),
             nn.ReLU(),
             nn.Dropout(0.1),
             nn.BatchNorm1d(self.inter_dim),
-            
-            nn.Conv1d(in_channels=self.inter_dim, out_channels=self.inter_dim, kernel_size = 3, stride=1, padding = 1),
+            nn.Conv1d(
+                in_channels=self.inter_dim,
+                out_channels=self.inter_dim,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+            ),
             nn.ReLU(),
             nn.Dropout(0.1),
             nn.BatchNorm1d(self.inter_dim),
-            
             nn.AdaptiveAvgPool1d(output_size=1),
             nn.Flatten(start_dim=1),
-            
             nn.Linear(self.inter_dim, self.inter_dim),
             nn.GELU(),
             nn.Dropout(0.1),
             nn.Linear(self.inter_dim, self.token_dim),
             nn.LayerNorm(self.token_dim),
         )
-        
+
         self.token_adapt_histo = nn.Sequential(
             nn.Linear(self.histo_input_dim, self.inter_dim),
             nn.GELU(),
@@ -214,7 +225,7 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
             nn.Linear(self.inter_dim, self.token_dim),
             nn.LayerNorm(self.token_dim),
         )
-        
+
         self.token_adapt_rad_pe = nn.Sequential(
             nn.Linear(self.inter_dim, self.token_dim),
             nn.GELU(),
@@ -222,7 +233,7 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
             nn.Linear(self.token_dim, self.token_dim),
             nn.LayerNorm(self.token_dim),
         )
-        
+
         self.token_adapt_histo_pe = nn.Sequential(
             nn.Linear(self.inter_dim, self.token_dim),
             nn.GELU(),
@@ -230,136 +241,149 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
             nn.Linear(self.token_dim, self.token_dim),
             nn.LayerNorm(self.token_dim),
         )
-        
-        self.dpe = DynamicPositionalEmbedding(in_channels=self.inter_dim*66, out_channels=self.token_dim)
-        
-        self.fusion = fusion_layer(d_model=self.token_dim,dim_hider=self.dim_hider,nhead=4, dropout=0.4)
-        
+
+        self.dpe = DynamicPositionalEmbedding(
+            in_channels=self.inter_dim * 66, out_channels=self.token_dim
+        )
+
+        self.fusion = fusion_layer(
+            d_model=self.token_dim, dim_hider=self.dim_hider, nhead=4, dropout=0.4
+        )
+
         self.hazard_net = nn.Sequential(
             nn.Linear(self.token_dim, self.dim_hider),  # First hidden layer
             nn.ReLU(),
             nn.Dropout(0.1),  # Dropout for regularization
-
             nn.Linear(self.dim_hider, self.token_dim),  # Second hidden layer
             nn.ReLU(),
             nn.Dropout(0.1),
-
-            nn.Linear(self.token_dim, 1)  # Output layer
+            nn.Linear(self.token_dim, 1),  # Output layer
         )
-        
+
         self.norm_pe = nn.LayerNorm(self.token_dim)
         self.norm_att = nn.LayerNorm(self.token_dim)
-        
 
-        
-        
-    def forward(self, rad_feature, histo_feature, modality_flag=None, output_layers=["hazard"]):
+    def forward(
+        self, rad_feature, histo_feature, modality_flag=None, output_layers=["hazard"]
+    ):
         """Forward pass:
-            rad_feature (batch, slices, feature) [B,66,1024]
-            histo_feature (batch, feature) [B,768]
+        rad_feature (batch, slices, feature) [B,66,1024]
+        histo_feature (batch, feature) [B,768]
         """
         outputs = OrderedDict()
         # if self._add_output_and_check("features",torch.cat([rad_feature,histo_feature], dim = 1), outputs, output_layers):
         #    return outputs
-        
+
         rad_mask = modality_flag[:, 0].bool().to(rad_feature.device)
         histo_mask = modality_flag[:, 1].bool().to(histo_feature.device)
         batch_size = rad_mask.shape[0]
-        
+
         # Adapt rad_features to (,512) (adapt only the available modality)
-        adapted_rad = self.rad_adapter(rad_feature[rad_mask].permute(0,2,1)) # (.,512)
+        adapted_rad = self.rad_adapter(
+            rad_feature[rad_mask].permute(0, 2, 1)
+        )  # (.,512)
         # print(adapted_rad.shape)
         # Adapt histo_features to (,512) (only the available modality)
-        adapted_histo = self.histo_adapter(histo_feature[histo_mask]) # (.,512)
+        adapted_histo = self.histo_adapter(histo_feature[histo_mask])  # (.,512)
         # Return the concatenated adapted features if chosen
-        
+
         f_adapted_rad = torch.empty(
-            batch_size,
-            adapted_rad.shape[1],
-            adapted_rad.shape[2]
+            batch_size, adapted_rad.shape[1], adapted_rad.shape[2]
         ).to(self.missing_rad_token.device)
-        
+
         f_adapted_histo = torch.empty(
             batch_size,
             adapted_histo.shape[1],
         ).to(self.missing_rad_token.device)
-        
+
         f_adapted_rad[rad_mask] = adapted_rad
         f_adapted_histo[histo_mask] = adapted_histo
-        
-        f_adapted_rad[~rad_mask] = self.missing_rad_token.repeat((~rad_mask).sum(),1,1)
-        f_adapted_histo[~histo_mask] = self.missing_histo_token.repeat((~histo_mask).sum(),1)
-        
-        modality_flags = ~torch.min(
-            rad_mask, histo_mask
-        ) 
-        
+
+        f_adapted_rad[~rad_mask] = self.missing_rad_token.repeat(
+            (~rad_mask).sum(), 1, 1
+        )
+        f_adapted_histo[~histo_mask] = self.missing_histo_token.repeat(
+            (~histo_mask).sum(), 1
+        )
+
+        modality_flags = ~torch.min(rad_mask, histo_mask)
+
         # Return the concatenated adapted features if chosen
-#        if self._add_output_and_check("adapted_features", torch.cat([f_adapted_rad,f_adapted_histo],dim=1), outputs, output_layers):
- #           return outputs 
-        if self._add_output_and_check("adapted_histo", f_adapted_histo, outputs, output_layers):
-            return outputs 
-        if self._add_output_and_check("adapted_rad", f_adapted_rad, outputs, output_layers):
-            return outputs 
-        
-        # Calculate Positional Embedding  
+        #        if self._add_output_and_check("adapted_features", torch.cat([f_adapted_rad,f_adapted_histo],dim=1), outputs, output_layers):
+        #           return outputs
+        if self._add_output_and_check(
+            "adapted_histo", f_adapted_histo, outputs, output_layers
+        ):
+            return outputs
+        if self._add_output_and_check(
+            "adapted_rad", f_adapted_rad, outputs, output_layers
+        ):
+            return outputs
+
+        # Calculate Positional Embedding
         pe = self.dpe(
-            f_adapted_rad, # (B,66,1024) tipo
-            self.token_adapt_histo_pe(f_adapted_histo), #(B,64)
+            f_adapted_rad,  # (B,66,1024) tipo
+            self.token_adapt_histo_pe(f_adapted_histo),  # (B,64)
             rad_mask,
-            histo_mask
-        ) # (B, 64)   
+            histo_mask,
+        )  # (B, 64)
         # Return the positional embeddings if chosen
-        if self._add_output_and_check("positional_embeddings", pe, outputs, output_layers):
-            return outputs 
-        
+        if self._add_output_and_check(
+            "positional_embeddings", pe, outputs, output_layers
+        ):
+            return outputs
+
         # Adapt for tokenization and inject missing tokens for missing modalities
-        rad_tokens_pre = self.token_adapt_rad(rad_feature[rad_mask].permute(0,2,1)) # (, 64)
-        histo_tokens_pre = self.token_adapt_histo(histo_feature[histo_mask]) # (,64) 
-        rad_tokens =  torch.empty(
+        rad_tokens_pre = self.token_adapt_rad(
+            rad_feature[rad_mask].permute(0, 2, 1)
+        )  # (, 64)
+        histo_tokens_pre = self.token_adapt_histo(histo_feature[histo_mask])  # (,64)
+        rad_tokens = torch.empty(
             batch_size,
             rad_tokens_pre.shape[1],
         ).to(self.missing_rad_token.device)
-        
+
         histo_tokens = torch.empty(
             batch_size,
             histo_tokens_pre.shape[1],
         ).to(self.missing_histo_token.device)
-   
-        
+
         rad_tokens[rad_mask] = rad_tokens_pre
         histo_tokens[histo_mask] = histo_tokens_pre
-        
-        rad_tokens[~rad_mask] = self.missing_rad_token_fusion.repeat((~rad_mask).sum(),1)
-        histo_tokens[~histo_mask] = self.missing_histo_token_fusion.repeat((~histo_mask).sum(),1) 
-        
+
+        rad_tokens[~rad_mask] = self.missing_rad_token_fusion.repeat(
+            (~rad_mask).sum(), 1
+        )
+        histo_tokens[~histo_mask] = self.missing_histo_token_fusion.repeat(
+            (~histo_mask).sum(), 1
+        )
+
         # Attention-based fusion
         f_att = self.fusion(
             rad_tokens,
             histo_tokens,
             pe.sigmoid(),
         )
-        
+
         # Skip connection
         pe_norm = self.norm_pe(pe)
         f_att_norm = self.norm_att(f_att)
         out = f_att_norm + pe_norm
-        
+
         # Return the fused features if chosen
         if self._add_output_and_check("fused_features", out, outputs, output_layers):
             return outputs
-        
+
         out = self.hazard_net(out)
         outputs["hazard"] = out
-        
+
         return outputs
-    
+
     def _add_output_and_check(self, name, x, outputs, output_layers):
         if name in output_layers:
             outputs[name] = x
         return len(output_layers) == len(outputs)
-    
-    
+
 
 # @model_constructor
 # def dpet_resnet18(segm_input_dim=(256,256), segm_inter_dim=(256,256),
@@ -385,20 +409,19 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
 #
 #    return net
 #
-def madpe_nobackbone(rad_input_dim = 1024,
-        histo_input_dim = 768,
-        inter_dim = 512,
-        token_dim = 64,
-        ):
+def madpe_nobackbone(
+    rad_input_dim=1024,
+    histo_input_dim=768,
+    inter_dim=512,
+    token_dim=64,
+):
     model = MADPENetNoBackbonesSurv(
         rad_input_dim,
         histo_input_dim,
         inter_dim,
         token_dim,
-        )
+    )
     return model
-
-
 
 
 # @model_constructor
@@ -454,9 +477,7 @@ if __name__ == "__main__":
     )
     train_sample = next(iter(train_multimode_loader))
 
-    train_ct_vol = (
-        train_sample["ct_feature"].float().to(device)
-    )
+    train_ct_vol = train_sample["ct_feature"].float().to(device)
     train_wsi_vol = train_sample["wsi_feature"].float().to(device)
     train_label = train_sample["label"].to(device)
     modality_mask = train_sample["modality_mask"].to(device)

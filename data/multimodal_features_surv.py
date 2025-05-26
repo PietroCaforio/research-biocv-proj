@@ -1,8 +1,8 @@
-# TODO: Voglio fare un Dataset che prende in ingresso il path per le feature CT, 
-# il path per le feature WSI, il path per le labels (che contiene anche gli split) 
-# e il numero del fold (tra 0 e 4), e una stringa "train" o "test", in base al numero 
-# del fold carica in memoria i sample (che saranno coppie di feature WSI e associata CT, 
-# senza ripetere le WSI, ma ripetendo le CT se necessario)  
+# TODO: Voglio fare un Dataset che prende in ingresso il path per le feature CT,
+# il path per le feature WSI, il path per le labels (che contiene anche gli split)
+# e il numero del fold (tra 0 e 4), e una stringa "train" o "test", in base al numero
+# del fold carica in memoria i sample (che saranno coppie di feature WSI e associata CT,
+# senza ripetere le WSI, ma ripetendo le CT se necessario)
 import concurrent.futures
 import os
 import random
@@ -10,15 +10,16 @@ from itertools import product
 from pathlib import Path
 
 import cv2
+import h5py
 import numpy as np
+import pandas as pd
 import torch
+import torchstain
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-import torchstain
 from torchvision import transforms
+from tqdm import tqdm
 
-import pandas as pd
-import h5py
 
 class MultimodalCTWSIDatasetSurv(Dataset):
     """
@@ -26,12 +27,10 @@ class MultimodalCTWSIDatasetSurv(Dataset):
         at both dataset and sampling level
     """
 
-    
-    
     def __init__(
         self,
         fold: int,
-        split: str, # either "train" or "test"
+        split: str,  # either "train" or "test"
         ct_path: str,
         wsi_path: str,
         labels_splits_path: str,
@@ -62,10 +61,12 @@ class MultimodalCTWSIDatasetSurv(Dataset):
         )
         self.pairs_per_patient = pairs_per_patient  # For fixed_count mode
         self.allow_repeats = allow_repeats  # For fixed_count mode
-        labels_splits = pd.read_csv(labels_splits_path, sep = "\t")
+        labels_splits = pd.read_csv(labels_splits_path, sep="\t")
         labels_splits = labels_splits[labels_splits[f"fold_{self.fold}"] == self.split]
-        self.labels_splits = labels_splits[["case_id","OS_days","OS_event"]].drop_duplicates("case_id")
-        
+        self.labels_splits = labels_splits[
+            ["case_id", "OS_days", "OS_event"]
+        ].drop_duplicates("case_id")
+
         # Initialize data structures
         # Will store CT and WSI paths per patient
         self.patient_data = {}
@@ -76,7 +77,6 @@ class MultimodalCTWSIDatasetSurv(Dataset):
         # Load split file
         self._load_split()
 
-        
     def _get_max_pairs_for_patient(self, ct_scans, wsi_folders, allow_repeats):
         """
         Calculate maximum possible pairs for a patient based on available data and pairing mode.
@@ -156,7 +156,7 @@ class MultimodalCTWSIDatasetSurv(Dataset):
         max_pairs_possible = float("inf")
         if self.pairing_mode == "fixed_count":
             for patient_id in self.labels_splits["case_id"].values:
-                
+
                 ct_path = os.path.join(self.ct_path, patient_id)
                 ct_features = []
                 if os.path.exists(ct_path):
@@ -176,8 +176,7 @@ class MultimodalCTWSIDatasetSurv(Dataset):
                 if patient_max_pairs > 0:  # Only update if patient has both modalities
 
                     max_pairs_possible = min(max_pairs_possible, patient_max_pairs)
-                    
-        
+
         # Use provided pairs_per_patient or calculated maximum
         n_pairs = (
             self.pairs_per_patient
@@ -196,11 +195,7 @@ class MultimodalCTWSIDatasetSurv(Dataset):
 
             # Find all WSI .h5 files for this patient
             wsi_path = self.wsi_path
-            wsi_features = [
-                f
-                for f in os.listdir(wsi_path)
-                if patient_id in f
-            ]
+            wsi_features = [f for f in os.listdir(wsi_path) if patient_id in f]
 
             # Skip patient if we require both modalities and they don't have them
             if self.require_both_modalities and (not ct_features or not wsi_features):
@@ -234,7 +229,9 @@ class MultimodalCTWSIDatasetSurv(Dataset):
                         self.samples.append(
                             {
                                 "patient_id": patient_id,
-                                "ct_path": os.path.join(self.ct_path, patient_id, ct_feature),
+                                "ct_path": os.path.join(
+                                    self.ct_path, patient_id, ct_feature
+                                ),
                                 "wsi_folder": os.path.join(self.wsi_path, wsi_feature),
                                 "base_modality_mask": [1, 1],
                             }
@@ -255,7 +252,9 @@ class MultimodalCTWSIDatasetSurv(Dataset):
                         self.samples.append(
                             {
                                 "patient_id": patient_id,
-                                "ct_path": os.path.join(self.ct_path, patient_id, ct_feature),
+                                "ct_path": os.path.join(
+                                    self.ct_path, patient_id, ct_feature
+                                ),
                                 "wsi_feature": os.path.join(self.wsi_path, wsi_feature),
                                 "base_modality_mask": [1, 1],
                             }
@@ -267,7 +266,9 @@ class MultimodalCTWSIDatasetSurv(Dataset):
                         self.samples.append(
                             {
                                 "patient_id": patient_id,
-                                "ct_path": os.path.join(self.ct_path, patient_id, ct_feature),
+                                "ct_path": os.path.join(
+                                    self.ct_path, patient_id, ct_feature
+                                ),
                                 "wsi_feature": os.path.join(self.wsi_path, wsi_feature),
                                 "base_modality_mask": [1, 1],
                             }
@@ -279,7 +280,9 @@ class MultimodalCTWSIDatasetSurv(Dataset):
                     self.samples.append(
                         {
                             "patient_id": patient_id,
-                            "ct_path": os.path.join(self.ct_path, patient_id, ct_feature),
+                            "ct_path": os.path.join(
+                                self.ct_path, patient_id, ct_feature
+                            ),
                             "wsi_feature": None,
                             "base_modality_mask": [1, 0],
                         }
@@ -297,8 +300,6 @@ class MultimodalCTWSIDatasetSurv(Dataset):
                         }
                     )
 
-                
-
     def _load_ct_feature(self, ct_path):
         """Load and standardize CT feature"""
         volume = np.load(ct_path)
@@ -307,14 +308,14 @@ class MultimodalCTWSIDatasetSurv(Dataset):
     def _load_wsi_feature(self, wsi_path):
         """Load WSI feature"""
         feature = None
-        with h5py.File(wsi_path,"r") as f:
-            feature = np.array(f["features"][:])            
+        with h5py.File(wsi_path, "r") as f:
+            feature = np.array(f["features"][:])
 
         return feature
 
     def _get_empty_ct_feature(self):
         """Return empty CT feature of correct shape"""
-        return np.zeros((66,1024))
+        return np.zeros((66, 1024))
 
     def _get_empty_wsi_feature(self):
         """Return empty WSI feature of correct shape"""
@@ -342,7 +343,10 @@ class MultimodalCTWSIDatasetSurv(Dataset):
         if self.missing_modality_prob > 0:
             if self.missing_modality == "both":
                 for i in range(2):
-                    if base_mask[i] == 1 and random.random() < self.missing_modality_prob:
+                    if (
+                        base_mask[i] == 1
+                        and random.random() < self.missing_modality_prob
+                    ):
                         final_mask[i] = 0
             elif self.missing_modality == "ct":
                 if base_mask[0] == 1 and random.random() < self.missing_modality_prob:
@@ -376,10 +380,16 @@ class MultimodalCTWSIDatasetSurv(Dataset):
             "ct_feature": torch.from_numpy(ct_feature).float(),
             "wsi_feature": torch.from_numpy(wsi_feature).float(),
             "survtime": torch.tensor(
-                self.labels_splits[self.labels_splits["case_id"] == patient_id]["OS_days"].iloc[0], dtype=torch.long
+                self.labels_splits[self.labels_splits["case_id"] == patient_id][
+                    "OS_days"
+                ].iloc[0],
+                dtype=torch.long,
             ),
             "censor": ~torch.tensor(
-                self.labels_splits[self.labels_splits["case_id"] == patient_id]["OS_event"].iloc[0], dtype=torch.bool
+                self.labels_splits[self.labels_splits["case_id"] == patient_id][
+                    "OS_event"
+                ].iloc[0],
+                dtype=torch.bool,
             ),
             "modality_mask": torch.tensor(final_mask, dtype=torch.float32),
             "base_modality_mask": torch.tensor(base_mask, dtype=torch.float32),
@@ -406,31 +416,31 @@ class MultimodalCTWSIDatasetSurv(Dataset):
         batch["censor"] = batch["censor"].to(device)
         batch["modality_mask"] = batch["modality_mask"].to(device)
 
+
 # ---------------------------------------------------------------------
 
 
 def test_multimodal_dataset():
     # Initialize dataset
     dataset = MultimodalCTWSIDatasetSurv(
-        fold = 0,
-        split="test",
+        fold=0,
+        split="train",
         ct_path="../MedImageInsights/embeddings_output_cptacpda_93",
         wsi_path="../../TitanCPTACPDA/20x_512px_0px_overlap/slide_features_titan",
         labels_splits_path="./data/processed/processed_CPTAC_PDA_survival/k=all.tsv",
-        missing_modality_prob=0.05,  # 20% chance of each modality being missing
-        missing_modality= "wsi",
+        missing_modality_prob=0.3,  # 30% chance of each modality being missing
+        missing_modality="both",
         require_both_modalities=True,
         pairing_mode="one_to_one",
         allow_repeats=True,
         pairs_per_patient=None,
     )
-    
+
     print("\nDataset Statistics:")
     stats = dataset.stats()
     for key, value in stats.items():
         print(f"  {key}: {value}")
 
-    
     # Test a few random samples
     print("\nTesting random samples:")
     for i in range(3):
@@ -447,15 +457,54 @@ def test_multimodal_dataset():
 
     # Test DataLoader
     print("\nTesting DataLoader:")
-    dataloader = DataLoader(dataset, batch_size=2, num_workers=8, shuffle=True)
-    batch = next(iter(dataloader))
-
-    print("Batch shapes:")
-    print(f"  CT features: {batch['ct_feature'].shape}")
-    print(f"  WSI features: {batch['wsi_feature'].shape}")
-    print(f"  Survtimes: {batch['survtime'].shape}")
-    print(f"  Censors: {batch['censor'].shape}")
-    print(f"  Modality masks: {batch['modality_mask'].shape}")
+    dataloader = DataLoader(dataset, batch_size=16, num_workers=8, shuffle=True)
+    #batch = next(iter(dataloader))
+    total_samples = 0
+    ct_only = 0
+    wsi_only = 0
+    both_modalities = 0
+    no_modalities = 0
+    for batch in tqdm(dataloader, desc = "Analyzing dataset"):
+        batch_size = len(batch["patient_id"])
+        total_samples += batch_size
+        
+        modality_masks = batch["modality_mask"]
+        print(len(modality_masks) != batch_size)
+        for i in range(batch_size):
+            mask = modality_masks[i].tolist()
+            
+            if mask[0] == 1 and mask[1] == 1:
+                both_modalities += 1
+            elif mask[0] == 1 and mask[1] == 0:
+                ct_only += 1
+            elif mask[0] == 0 and mask[1] == 1:
+                wsi_only += 1
+            else:
+                no_modalities += 1
+        
+    # Calculate percentages
+    ct_only_pct = (ct_only / total_samples) * 100 if total_samples > 0 else 0
+    wsi_only_pct = (wsi_only / total_samples) * 100 if total_samples > 0 else 0
+    both_pct = (both_modalities / total_samples) * 100 if total_samples > 0 else 0
+    none_pct = (no_modalities / total_samples) * 100 if total_samples > 0 else 0
+    
+    """Pretty print the modality statistics"""
+    print("\n===== MODALITY STATISTICS =====")
+    
+    # Sample-level statistics
+    print("\n----- Sample Level Statistics -----")
+    
+    print(f"Total samples: {total_samples}")
+    print(f"CT only: {ct_only} ({ct_only_pct:.2f}%)")
+    print(f"WSI only: {wsi_only} ({wsi_only_pct:.2f}%)")
+    print(f"Both modalities: {both_modalities} ({both_pct:.2f}%)")
+    
+    # print("Batch shapes:")
+    # print(f"  CT features: {batch['ct_feature'].shape}")
+    # print(f"  WSI features: {batch['wsi_feature'].shape}")
+    # print(f"  Survtimes: {batch['survtime'].shape}")
+    # print(f"  Censors: {batch['censor'].shape}")
+    # print(f"  Modality masks: {batch['modality_mask'].shape}")
 
 
 if __name__ == "__main__":

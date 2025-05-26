@@ -1,9 +1,10 @@
 import math
+from collections import OrderedDict
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from collections import OrderedDict
+
 
 def conv3D(in_planes, out_planes, kernel_size=3, stride=1, padding=1, dilation=1):
     return nn.Sequential(
@@ -174,12 +175,14 @@ class DPENet(nn.Module):
         vol_wh=224,
         d_model=64,
         dim_hider=256,
-        nhead=8
+        nhead=8,
     ):
         # segm_dim=(64, 64), mixer_channels=2, topk_pos=3, topk_neg=3
         super().__init__()
         # attention based fusion net
-        self.fusion = fusion_layer(d_model=d_model, dim_hider=dim_hider, nhead=nhead, dropout=0.1)
+        self.fusion = fusion_layer(
+            d_model=d_model, dim_hider=dim_hider, nhead=nhead, dropout=0.1
+        )
         # 1x1,3x3 conv for correlation net
         self.cor_conv0 = conv3D(input_dim, inter_dim, kernel_size=1, padding=0)
         self.cor_conv1 = conv_no_relu3D(inter_dim, inter_dim)
@@ -266,19 +269,28 @@ class DPENet(nn.Module):
         self.positional_embedding = PositionalEmbedding(
             flattened_dim, flattened_dim_out
         )
+
     def _add_output_and_check(self, name, x, outputs, output_layers):
         if name in output_layers:
             outputs[name] = x
         return len(output_layers) == len(outputs)
+
     #   mask_train, test_dist=None, feat_ups=None, up_masks=None, segm_update_flag=False):
-    def forward(self, feat_rad, feat_histo, rad_mask, histo_mask, output_layers = ["classification"]):
+    def forward(
+        self,
+        feat_rad,
+        feat_histo,
+        rad_mask,
+        histo_mask,
+        output_layers=["classification"],
+    ):
 
         outputs = OrderedDict()
         # Project features to token dimensions for positional embeddings
 
         batch_size = rad_mask.shape[0]
         # print("feat_rad:", feat_rad[3].size())
-        
+
         f_rad_present = self.cor_conv1(self.cor_conv0(feat_rad[3]))
         f_histo_present = self.cor_conv1(self.cor_conv0(feat_histo[3]))
 
@@ -314,9 +326,11 @@ class DPENet(nn.Module):
             (torch.unsqueeze(pred_pos, dim=1), torch.unsqueeze(pred_neg, dim=1)), dim=1
         )
         # print("class_layers size:", class_layers.size())
-        if self._add_output_and_check("class_layers", class_layers, outputs, output_layers):
-            return outputs 
-        
+        if self._add_output_and_check(
+            "class_layers", class_layers, outputs, output_layers
+        ):
+            return outputs
+
         modality_flags = ~torch.min(
             rad_mask, histo_mask
         )  # 1 when sample contains missing modality
@@ -325,9 +339,11 @@ class DPENet(nn.Module):
 
         pe = self.positional_embedding(class_layers, modality_flags)
         # print("positional_embeddings size: ", pe.size())
-        if self._add_output_and_check("positional_embeddings", pe, outputs, output_layers):
-            return outputs 
-        
+        if self._add_output_and_check(
+            "positional_embeddings", pe, outputs, output_layers
+        ):
+            return outputs
+
         # Project features again to tokens for feature fusion
         rad_token_pres = self.att_conv1(self.att_conv0(feat_rad[3]))
         histo_token_pres = self.att_conv1(self.att_conv0(feat_histo[3]))
@@ -365,8 +381,7 @@ class DPENet(nn.Module):
             histo_tokens,
             pe.sigmoid(),
         )
-        
-        
+
         # Skip connection
         out = f_att + pe
         # print("fused_features size:", out.size())
@@ -376,7 +391,9 @@ class DPENet(nn.Module):
         out = self.conv3d_1(out)  # [bsize, 128, depth/2, h/2, w/2]
         out = self.conv3d_2(out)  # [bsize, 256, depth/4, h/4, w/4]
         # print("before_classification size:", out.size())
-        if self._add_output_and_check("before_classification", out, outputs, output_layers):
+        if self._add_output_and_check(
+            "before_classification", out, outputs, output_layers
+        ):
             return outputs
         out = self.global_avg_pool(out)  # [bsize, 256, 1, 1, 1]
         out = torch.flatten(out, 1)  # [bsize, 256]

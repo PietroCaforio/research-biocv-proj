@@ -46,7 +46,9 @@ def main(args):
 
     for patient_id_folder, patches in patch_dict.items():
         seq_num = 0
-        patient_id = patient_id_folder.split("-")[0]+"-"+patient_id_folder.split("-")[1]
+        patient_id = (
+            patient_id_folder.split("-")[0] + "-" + patient_id_folder.split("-")[1]
+        )
         if patient_id not in patients:
             logging.info(f"{patient_id} not in patients file, skipped.")
             continue
@@ -55,8 +57,8 @@ def main(args):
         for idx, img in enumerate(patches):
             src = os.path.join(args.patch_path, img)
             dst = os.path.join(patch_folder, f"{idx}.png")
-            shutil.copy(src,dst)
-        
+            shutil.copy(src, dst)
+
         logging.info(f"{patch_folder} done.")
 
 

@@ -56,7 +56,9 @@ class MADPENet(nn.Module):  # ModalityAwareDPENet da decidere nome
                     p.requires_grad_(True)
                     # print(name, "requires grad in histo backbone")
 
-    def forward(self, rad_vols, histo_vols, modality_flag=None, output_layers=["classification"]):
+    def forward(
+        self, rad_vols, histo_vols, modality_flag=None, output_layers=["classification"]
+    ):
         """Forward pass
         Note: If the training is done in sequence mode, that is, test_imgs.dim() == 5,
         then the batch dimension corresponds to the first dimensions.
@@ -126,10 +128,10 @@ def madpe_resnet34(
     pretrained_histo_path="./models/pretrain_weights/r3d34_K_200ep.pth",
     backbone_grad=False,
     backbone_unfreeze_layers=None,
-    num_classes = 3,
+    num_classes=3,
     d_model=64,
     dim_hider=256,
-    nhead=8
+    nhead=8,
 ):
     # radiology backbone
     rad_backbone_net = resnet3D.generate_model(34, n_input_channels=3, n_classes=700)
@@ -161,7 +163,14 @@ def madpe_resnet34(
         # rad_backbone_net.fc = nn.Linear(rad_backbone_net.fc.in_features,3)
 
     # classification
-    class_predictor = DPENet(vol_depth=vol_depth, vol_wh=vol_wh, num_classes=num_classes, d_model=d_model,dim_hider=dim_hider, nhead=nhead)
+    class_predictor = DPENet(
+        vol_depth=vol_depth,
+        vol_wh=vol_wh,
+        num_classes=num_classes,
+        d_model=d_model,
+        dim_hider=dim_hider,
+        nhead=nhead,
+    )
 
     net = MADPENet(
         rad_backbone=rad_backbone_net,
@@ -216,7 +225,7 @@ if __name__ == "__main__":
         pairs_per_patient=None,
         downsample=False,
         histo_normalization="macenko",
-        std_target="data/processed/processed_CPTAC_PDA_71_3D/WSI/C3L-00625-25/96.png"
+        std_target="data/processed/processed_CPTAC_PDA_71_3D/WSI/C3L-00625-25/96.png",
     )
 
     # Create dataloaders
