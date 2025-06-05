@@ -100,101 +100,116 @@ class fusion_layer(nn.Module):
         f22, f22_weights = self.cross_att3(fq, fk, fv)
 
         return f22
+
+
 import torch
 import torch.nn as nn
 
 # BasicBlock for ResNet18 and ResNet34
 class BasicBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
-        super(BasicBlock, self).__init__()
+        super().__init__()
         self.layer = nn.Sequential(
-            nn.Conv1d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1),
+            nn.Conv1d(
+                in_channels, out_channels, kernel_size=3, stride=stride, padding=1
+            ),
             nn.BatchNorm1d(out_channels),
             nn.ReLU(),
             nn.Conv1d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(out_channels)
+            nn.BatchNorm1d(out_channels),
         )
         self.relu = nn.ReLU()
-        
+
         # Shortcut connection (identity or projection)
         if stride != 1 or in_channels != out_channels:
             self.shortcut = nn.Sequential(
                 nn.Conv1d(in_channels, out_channels, kernel_size=1, stride=stride),
-                nn.BatchNorm1d(out_channels)
+                nn.BatchNorm1d(out_channels),
             )
         else:
             self.shortcut = nn.Identity()
-            
+
     def forward(self, x):
         residual = self.shortcut(x)
         out = self.layer(x)
         return self.relu(out + residual)
+
 
 # Bottleneck block for ResNet50 (for reference)
 class Bottleneck(nn.Module):
     expansion = 4  # Output channels = in_channels * expansion
-    
+
     def __init__(self, in_channels, out_channels, stride=1):
-        super(Bottleneck, self).__init__()
+        super().__init__()
         self.layer = nn.Sequential(
             nn.Conv1d(in_channels, out_channels, kernel_size=1, stride=1),
             nn.BatchNorm1d(out_channels),
             nn.ReLU(),
-            nn.Conv1d(out_channels, out_channels, kernel_size=3, stride=stride, padding=1),
+            nn.Conv1d(
+                out_channels, out_channels, kernel_size=3, stride=stride, padding=1
+            ),
             nn.BatchNorm1d(out_channels),
             nn.ReLU(),
-            nn.Conv1d(out_channels, out_channels * self.expansion, kernel_size=1, stride=1),
-            nn.BatchNorm1d(out_channels * self.expansion)
+            nn.Conv1d(
+                out_channels, out_channels * self.expansion, kernel_size=1, stride=1
+            ),
+            nn.BatchNorm1d(out_channels * self.expansion),
         )
         self.relu = nn.ReLU()
-        
+
         # Shortcut connection
         if stride != 1 or in_channels != out_channels * self.expansion:
             self.shortcut = nn.Sequential(
-                nn.Conv1d(in_channels, out_channels * self.expansion, kernel_size=1, stride=stride),
-                nn.BatchNorm1d(out_channels * self.expansion)
+                nn.Conv1d(
+                    in_channels,
+                    out_channels * self.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                ),
+                nn.BatchNorm1d(out_channels * self.expansion),
             )
         else:
             self.shortcut = nn.Identity()
-            
+
     def forward(self, x):
         residual = self.shortcut(x)
         out = self.layer(x)
         return self.relu(out + residual)
 
+
 # Base ResNet class
 class ResNet(nn.Module):
     def __init__(self, block, layers, in_channels=2, num_classes=125):
-        super(ResNet, self).__init__()
-        
+        super().__init__()
+
         self.in_channels = 64
-        
+
         # Initial layers
         self.conv1 = nn.Conv1d(in_channels, 64, kernel_size=7, stride=2, padding=3)
         self.bn1 = nn.BatchNorm1d(64)
         self.relu = nn.ReLU()
         self.maxpool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
-        
+
         # Residual layers
         self.layer1 = self._make_layer(block, 64, layers[0], stride=1)
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
-        
+
         # Final layers
         self.avgpool = nn.AdaptiveAvgPool1d(1)
-        
+
         # Calculate final number of features based on block type
         if block == BasicBlock:
             final_out_channels = 512
         else:  # Bottleneck
             final_out_channels = 512 * Bottleneck.expansion
-            
+
         self.fc = nn.Linear(final_out_channels, num_classes)
-        
+
     def _make_layer(self, block, out_channels, blocks, stride=1):
         layers = []
-        
+
         # First block may need to downsample
         if block == BasicBlock:
             layers.append(block(self.in_channels, out_channels, stride))
@@ -202,45 +217,47 @@ class ResNet(nn.Module):
         else:  # Bottleneck
             layers.append(block(self.in_channels, out_channels, stride))
             self.in_channels = out_channels * Bottleneck.expansion
-        
+
         # Remaining blocks
         for _ in range(1, blocks):
             if block == BasicBlock:
                 layers.append(block(self.in_channels, out_channels))
             else:  # Bottleneck
                 layers.append(block(self.in_channels, out_channels))
-                
+
         return nn.Sequential(*layers)
-    
+
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
-        
+
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-        
+
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
         x = self.fc(x)
-        
+
         return x
+
 
 # ResNet18
 def ResNet18(in_channels=2, num_classes=125):
     return ResNet(BasicBlock, [2, 2, 2, 2], in_channels, num_classes)
 
+
 # ResNet34
 def ResNet34(in_channels=2, num_classes=125):
     return ResNet(BasicBlock, [3, 4, 6, 3], in_channels, num_classes)
 
+
 # ResNet50 (for reference)
 def ResNet50(in_channels=2, num_classes=125):
     return ResNet(Bottleneck, [3, 4, 6, 3], in_channels, num_classes)
-
 
 
 class HistoAdapter(nn.Module):
@@ -462,7 +479,7 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
             d_model=self.token_dim, dim_hider=self.dim_hider, nhead=16, dropout=0.25
         )
 
-        #self.hazard_net = nn.Sequential(
+        # self.hazard_net = nn.Sequential(
         #    nn.Linear(self.token_dim, self.dim_hider),  # First hidden layer
         #    nn.ReLU(),
         #    nn.Dropout(0.1),  # Dropout for regularization
@@ -470,13 +487,14 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
         #    nn.ReLU(),
         #    nn.Dropout(0.1),
         #    nn.Linear(self.token_dim, 1),  # Output layer
-        #)
+        # )
         self.hazard_net = ResNet18(in_channels=1, num_classes=1)
         self.norm_pe = nn.LayerNorm(self.token_dim, eps=1e-5)
         self.norm_att = nn.LayerNorm(self.token_dim, eps=1e-5)
         # self.act = nn.Sigmoid() #
         # self.output_range = nn.Parameter(torch.FloatTensor([6]), requires_grad=False) #
         # self.output_shift = nn.Parameter(torch.FloatTensor([-3]), requires_grad=False) #
+        self.gamma = nn.Parameter(torch.randn(1), requires_grad=True)
 
     def forward(
         self, rad_feature, histo_feature, modality_flag=None, output_layers=["hazard"]
@@ -591,7 +609,7 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
         # Return the fused features if chosen
         if self._add_output_and_check("fused_features", out, outputs, output_layers):
             return outputs
-        
+
         out = self.hazard_net(out.unsqueeze(1))
 
         # hazard = self.act(out) #
@@ -713,21 +731,21 @@ if __name__ == "__main__":
 # if __name__ == '__main__':
 #     # Create random input tensor
 #     x = torch.randn(size=(1, 1, 224))
-#     
+#
 #     # Initialize ResNet18 and ResNet34
 #     resnet18 = ResNet18(in_channels=1, num_classes=5)
 #     resnet34 = ResNet34(in_channels=1, num_classes=5)
-#     
+#
 #     # Forward pass
 #     output18 = resnet18(x)
 #     output34 = resnet34(x)
-#     
+#
 #     print(f"ResNet18 output shape: {output18.shape}")
 #     print(f"ResNet34 output shape: {output34.shape}")
-#     
+#
 #     # Model summary
 #     def count_parameters(model):
 #         return sum(p.numel() for p in model.parameters() if p.requires_grad)
-#     
+#
 #     print(f"ResNet18 parameter count: {count_parameters(resnet18):,}")
 #     print(f"ResNet34 parameter count: {count_parameters(resnet34):,}")

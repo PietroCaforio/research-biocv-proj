@@ -748,7 +748,7 @@ def test_multimodal_dataset():
     # Initialize dataset
     dataset = MultimodalCTWSIDataset(
         split="train",
-        dataset_path="./data/processed/processed_CPTAC_PDA_71_3D",
+        dataset_path="./data/processed/processed_CPTAC_PDA_survival",
         patches_per_wsi=66,
         sampling_strategy="consecutive-fixed",
         missing_modality_prob=0.0,  # 20% chance of each modality being missing

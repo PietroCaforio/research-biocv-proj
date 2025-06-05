@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Callable
 from typing import Dict
 from typing import Optional
+from typing import List
 
 import torch
 from torch.utils.data import DataLoader
@@ -301,6 +302,284 @@ class BaseTrainer:
             self.config["training"]["monitor_metric"]: self.best_monitor_metric,
             "val_loss": self.best_val_loss,
         }
+class BaseTrainerNValLoaders:
+    """Flexible base trainer class that handles configurable training functionality."""
+
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        train_loader: DataLoader,
+        val_loaders: Dict, # {"name_of_loader": Loader}
+        criterion: torch.nn.Module,
+        optimizer: torch.optim.Optimizer,
+        config: Dict,
+        device: torch.device,
+        experiment_name: str,
+        scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
+        early_stopping: Optional[Dict] = None,
+        metric_functions: Optional[Dict[str, Callable]] = None,
+        n_validations: int = None,
+    ):
+        self.model = model
+        self.train_loader = train_loader
+        self.val_loaders = val_loaders
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.config = config
+        self.device = device
+        self.experiment_name = experiment_name.replace("/", "_")
+        self.scheduler = scheduler
+        self.n_validations = n_validations
+        # Early stopping configuration
+        self.early_stopping_config = early_stopping or {}
+        self.early_stopping_counter = 0
+        self.best_monitor_metric = (
+            float("inf")
+            if self.early_stopping_config.get("mode") == "min"
+            else float("-inf")
+        )
+
+        # Metric functions for tracking
+        self.metric_functions = metric_functions or {}
+
+        # Training state
+        self.current_epoch = 0
+        self.best_val_loss = float("inf")
+        self.training_metrics = {}
+        wandb.login()
+        wandb.init(
+            project=config["wandb"]["project_name"],
+            name=self.experiment_name,
+            config=config,
+            dir=config["training"]["checkpoint_dir"] + self.experiment_name,
+        )
+
+        # Setup logging and checkpoints
+        self.setup_logging()
+
+    def setup_logging(self):
+        """Initialize logging and create checkpoint directory."""
+        self.checkpoint_dir = Path(
+            self.config["training"]["checkpoint_dir"] + self.experiment_name
+        )
+        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s - %(levelname)s - %(message)s",
+            handlers=[
+                logging.FileHandler(
+                    self.checkpoint_dir / f"{self.experiment_name}.log"
+                ),
+                logging.StreamHandler(),
+            ],
+        )
+        self.logger = logging.getLogger(__name__)
+
+    def compute_metrics(
+        self, outputs: torch.Tensor, targets: torch.Tensor, phase: str
+    ) -> Dict[str, float]:
+        """Compute all registered metrics."""
+        metrics = {}
+        for metric_name, metric_fn in self.metric_functions.items():
+            try:
+                metric_value = metric_fn(outputs, targets)
+                metrics[f"{phase}_{metric_name}"] = metric_value
+            except Exception as e:
+                self.logger.warning(f"Failed to compute {metric_name}: {str(e)}")
+        return metrics
+
+    def check_early_stopping(self, monitor_value: float) -> bool:
+        """Check if training should stop early."""
+        if not self.early_stopping_config:
+            return False
+
+        patience = self.early_stopping_config.get("patience", 0)
+        mode = self.early_stopping_config.get("mode", "min")
+        min_delta = self.early_stopping_config.get("min_delta", 0.0)
+
+        improved = (
+            mode == "min" and monitor_value < self.best_monitor_metric - min_delta
+        ) or (mode == "max" and monitor_value > self.best_monitor_metric + min_delta)
+
+        if improved:
+            self.best_monitor_metric = monitor_value
+            self.early_stopping_counter = 0
+            return False
+
+        self.early_stopping_counter += 1
+        if self.early_stopping_counter >= patience:
+            self.logger.info(
+                f"Early stopping triggered after {patience} epochs without improvement"
+            )
+            return True
+        return False
+
+    def update_scheduler(self, monitor_value: Optional[float] = None):
+        """Update learning rate scheduler."""
+        if self.scheduler is None:
+            return
+
+        if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            self.scheduler.step(monitor_value)
+        else:
+            self.scheduler.step()
+
+    def save_checkpoint(self, is_best: bool = False, val_loss=True):
+        """Save training checkpoint."""
+        checkpoint = {
+            "epoch": self.current_epoch,
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "scheduler_state_dict": self.scheduler.state_dict()
+            if self.scheduler
+            else None,
+            "best_val_loss": self.best_val_loss,
+            "best_monitor_metric": self.best_monitor_metric,
+            "config": self.config,
+            "training_metrics": self.training_metrics,
+            "timestamp": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+        }
+
+        latest_path = self.checkpoint_dir / f"{self.experiment_name}_latest.pth"
+        torch.save(checkpoint, latest_path)
+
+        if is_best and val_loss == False:
+            best_path = self.checkpoint_dir / f"{self.experiment_name}_best.pth"
+            torch.save(checkpoint, best_path)
+            self.logger.info(f"Saved best model checkpoint to {best_path}")
+        elif is_best:
+            best_path = (
+                self.checkpoint_dir / f"{self.experiment_name}_best_val_loss.pth"
+            )
+            torch.save(checkpoint, best_path)
+            self.logger.info(f"Saved best model checkpoint to {best_path}")
+
+    def load_checkpoint(self, checkpoint_path: Optional[str] = None):
+        """Load training checkpoint."""
+        if checkpoint_path is None:
+            checkpoint_path = self.checkpoint_dir / f"{self.experiment_name}_latest.pth"
+
+        if not Path(checkpoint_path).exists():
+            self.logger.info(f"No checkpoint found at {checkpoint_path}")
+            return False
+
+        checkpoint = torch.load(checkpoint_path)
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        if self.scheduler and checkpoint["scheduler_state_dict"]:
+            self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        self.current_epoch = checkpoint["epoch"]
+        self.best_val_loss = checkpoint["best_val_loss"]
+        self.best_monitor_metric = checkpoint.get(
+            "best_monitor_metric", self.best_monitor_metric
+        )
+        self.training_metrics = checkpoint.get("training_metrics", {})
+
+        self.logger.info(f"Loaded checkpoint from epoch {self.current_epoch}")
+        return True
+
+    def train_epoch(self):
+        """Train for one epoch."""
+        self.model.train()
+        epoch_metrics = {}
+
+        for batch_idx, batch in enumerate(self.train_loader):
+            # Implement in child class
+            raise NotImplementedError
+
+        return epoch_metrics
+
+    def validate(self, val_loader):
+        """Validate the model."""
+        self.model.eval()
+        epoch_metrics = {}
+
+        with torch.no_grad():
+            for batch in val_loader:
+                # Implement in child class
+                raise NotImplementedError
+
+        return epoch_metrics
+
+    def train(self):
+        """Main training loop."""
+        wandb.init(
+            project=self.config["training"].get("wandb_project", "default_project"),
+            name=self.experiment_name,
+            config=self.config,
+        )
+
+        for epoch in range(self.current_epoch, self.config["training"]["num_epochs"]):
+            self.current_epoch = epoch
+
+            # Training phase
+            train_metrics = self.train_epoch()
+            val_metrics = defaultdict()
+            if train_metrics is None:
+                self.logger.info("Detected NaN values, training stopped.")
+                break
+            for loader_name, val_loader in self.val_loaders:
+                # Validation phase
+                if self.n_validations == None:
+                    val_metrics_temp = self.validate(val_loader)
+                    for metric_name in val_metrics_temp.keys():
+                        val_metrics[metric_name + loader_name ] = val_metrics_temp[metric_name]
+                else:
+                    val_metrics_list = []
+                    for i in range(self.n_validations):
+                        val_metrics_list.append(self.validate(val_loader))
+
+                    # Calculate the average for each metric
+                    val_metrics = {}
+                    for metric_name in val_metrics_list[0].keys():
+                        val_metrics[metric_name + loader_name] = sum(
+                            d[metric_name] for d in val_metrics_list
+                        ) / len(val_metrics_list)
+
+            # Combine metrics and log
+            epoch_metrics = {**train_metrics, **val_metrics}
+            self.training_metrics[epoch] = epoch_metrics
+            current_lr = self.optimizer.param_groups[0]["lr"]
+            epoch_metrics["learning_rate"] = current_lr
+            wandb.log(epoch_metrics)
+
+            # Update learning rate scheduler
+            monitor_metric = val_metrics.get(
+                self.config["training"].get("monitor_metric", "val_loss")
+            )
+            val_loss = val_metrics.get("val_loss")
+            self.update_scheduler(monitor_metric)
+            # Save checkpoint
+            is_best = (
+                monitor_metric < self.best_monitor_metric
+                if self.early_stopping_config.get("mode") == "min"
+                else monitor_metric > self.best_monitor_metric
+            )
+            # Check early stopping
+            if self.check_early_stopping(monitor_metric):
+                break
+            is_best_loss = val_loss < self.best_val_loss
+            if is_best_loss:
+                self.best_val_loss = val_loss
+            self.save_checkpoint(is_best_loss)
+            self.save_checkpoint(is_best, val_loss=False)
+
+            self.logger.info(f"Best monitor metric: {self.best_monitor_metric}")
+            self.logger.info(f"Best monitor metric: {self.best_monitor_metric}")
+
+            # Log epoch summary
+            self.logger.info(
+                f'Epoch {epoch+1}/{self.config["training"]["num_epochs"]} - Metrics: '
+                + ", ".join([f"{k}: {v:.8f}" for k, v in epoch_metrics.items()])
+            )
+        wandb.finish()
+        return {
+            self.config["training"]["monitor_metric"]: self.best_monitor_metric,
+            "val_loss": self.best_val_loss,
+        }
+
+
 
 
 class MultimodalTrainer(BaseTrainer):

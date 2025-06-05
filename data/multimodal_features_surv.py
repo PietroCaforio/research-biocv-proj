@@ -302,7 +302,10 @@ class MultimodalCTWSIDatasetSurv(Dataset):
 
     def _load_ct_feature(self, ct_path):
         """Load and standardize CT feature"""
-        volume = np.load(ct_path)
+        if ct_path.endswith(".pt"):
+            volume = np.array(torch.load(ct_path, weights_only=True))
+        elif ct_path.endswith(".npy"):
+            volume = np.load(ct_path)
         return volume
 
     def _load_wsi_feature(self, wsi_path):
@@ -315,7 +318,7 @@ class MultimodalCTWSIDatasetSurv(Dataset):
 
     def _get_empty_ct_feature(self):
         """Return empty CT feature of correct shape"""
-        return np.zeros((66, 1024))
+        return np.zeros((66, 256, 32, 32))
 
     def _get_empty_wsi_feature(self):
         """Return empty WSI feature of correct shape"""
@@ -425,7 +428,7 @@ def test_multimodal_dataset():
     dataset = MultimodalCTWSIDatasetSurv(
         fold=0,
         split="train",
-        ct_path="../MedImageInsights/embeddings_output_cptacpda_93",
+        ct_path="../../CPTAC_PDA_CT_ft_MedSAM2_latest_ckpt",
         wsi_path="../../TitanCPTACPDA/20x_512px_0px_overlap/slide_features_titan",
         labels_splits_path="./data/processed/processed_CPTAC_PDA_survival/k=all.tsv",
         missing_modality_prob=0.3,  # 30% chance of each modality being missing
@@ -458,21 +461,21 @@ def test_multimodal_dataset():
     # Test DataLoader
     print("\nTesting DataLoader:")
     dataloader = DataLoader(dataset, batch_size=16, num_workers=8, shuffle=True)
-    #batch = next(iter(dataloader))
+    # batch = next(iter(dataloader))
     total_samples = 0
     ct_only = 0
     wsi_only = 0
     both_modalities = 0
     no_modalities = 0
-    for batch in tqdm(dataloader, desc = "Analyzing dataset"):
+    for batch in tqdm(dataloader, desc="Analyzing dataset"):
         batch_size = len(batch["patient_id"])
         total_samples += batch_size
-        
+
         modality_masks = batch["modality_mask"]
         print(len(modality_masks) != batch_size)
         for i in range(batch_size):
             mask = modality_masks[i].tolist()
-            
+
             if mask[0] == 1 and mask[1] == 1:
                 both_modalities += 1
             elif mask[0] == 1 and mask[1] == 0:
@@ -481,24 +484,24 @@ def test_multimodal_dataset():
                 wsi_only += 1
             else:
                 no_modalities += 1
-        
+
     # Calculate percentages
     ct_only_pct = (ct_only / total_samples) * 100 if total_samples > 0 else 0
     wsi_only_pct = (wsi_only / total_samples) * 100 if total_samples > 0 else 0
     both_pct = (both_modalities / total_samples) * 100 if total_samples > 0 else 0
     none_pct = (no_modalities / total_samples) * 100 if total_samples > 0 else 0
-    
+
     """Pretty print the modality statistics"""
     print("\n===== MODALITY STATISTICS =====")
-    
+
     # Sample-level statistics
     print("\n----- Sample Level Statistics -----")
-    
+
     print(f"Total samples: {total_samples}")
     print(f"CT only: {ct_only} ({ct_only_pct:.2f}%)")
     print(f"WSI only: {wsi_only} ({wsi_only_pct:.2f}%)")
     print(f"Both modalities: {both_modalities} ({both_pct:.2f}%)")
-    
+
     # print("Batch shapes:")
     # print(f"  CT features: {batch['ct_feature'].shape}")
     # print(f"  WSI features: {batch['wsi_feature'].shape}")

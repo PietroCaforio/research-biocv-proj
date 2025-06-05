@@ -81,7 +81,7 @@ class DynamicPositionalEmbedding(nn.Module):
 
 # attention based feature fusion network
 class fusion_layer(nn.Module):
-    def __init__(self, d_model=64, dim_hider=256, nhead=8, dropout=0.1):
+    def __init__(self, d_model=64, dim_hider=256, nhead=2, dropout=0.1):
         super().__init__()
         self.cross_att1 = torch.nn.MultiheadAttention(
             embed_dim=d_model, num_heads=nhead, dropout=dropout
@@ -318,7 +318,7 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
         )
 
         self.fusion = fusion_layer(
-            d_model=self.token_dim, dim_hider=self.dim_hider, nhead=2, dropout=0.25
+            d_model=self.token_dim, dim_hider=self.dim_hider, nhead=4, dropout=0.25
         )
 
         self.hazard_net = nn.Sequential(
@@ -337,6 +337,7 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
         # self.output_range = nn.Parameter(torch.FloatTensor([6]), requires_grad=False) #
         # self.output_shift = nn.Parameter(torch.FloatTensor([-3]), requires_grad=False) #
         self.gamma = nn.Parameter(torch.randn(1), requires_grad=True)
+
     def forward(
         self, rad_feature, histo_feature, modality_flag=None, output_layers=["hazard"]
     ):

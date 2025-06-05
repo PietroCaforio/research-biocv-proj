@@ -16,7 +16,9 @@ from torch.utils.data import DataLoader
 
 sys.path.insert(0, "./")  # noqa: E402
 from data.multimodal_features_surv import MultimodalCTWSIDatasetSurv  # noqa: E402
-from models.dpe.main_model_nobackbone_surv_new_vggclass import madpe_nobackbone  # noqa: E402
+from models.dpe.main_model_nobackbone_surv_new_vggclass import (
+    madpe_nobackbone,
+)  # noqa: E402
 from training.trainer_from_features_survival import SurvivalTrainer  # noqa: E402
 from training.losses import CoxLoss
 
