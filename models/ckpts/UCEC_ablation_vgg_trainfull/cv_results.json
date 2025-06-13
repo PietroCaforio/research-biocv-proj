@@ -1,0 +1,48 @@
+{
+    "fold_results": [
+        {
+            "fold": 0,
+            "num_train_samples": 61,
+            "num_test_samples": 22,
+            "best_metrics": {
+                "val_cindex": -Infinity,
+                "val_loss": Infinity
+            }
+        },
+        {
+            "fold": 1,
+            "num_train_samples": 65,
+            "num_test_samples": 18,
+            "best_metrics": {
+                "val_cindex": -Infinity,
+                "val_loss": Infinity
+            }
+        },
+        {
+            "fold": 2,
+            "num_train_samples": 59,
+            "num_test_samples": 24,
+            "best_metrics": {
+                "val_cindex": -Infinity,
+                "val_loss": Infinity
+            }
+        },
+        {
+            "fold": 3,
+            "num_train_samples": 64,
+            "num_test_samples": 19,
+            "best_metrics": {
+                "val_cindex": -Infinity,
+                "val_loss": Infinity
+            }
+        }
+    ],
+    "mean_metrics": {
+        "val_cindex": -Infinity,
+        "val_loss": Infinity
+    },
+    "std_metrics": {
+        "val_cindex": NaN,
+        "val_loss": NaN
+    }
+}

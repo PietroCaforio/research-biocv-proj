@@ -106,78 +106,62 @@ class VGG19(torch.nn.Module):
     def __init__(self, in_channels=1, classes=5):
         super().__init__()
         self.feature = torch.nn.Sequential(
-            torch.nn.Conv1d(in_channels, 64, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(64),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(64, 64, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(64),
-            torch.nn.ReLU(),
-            torch.nn.MaxPool1d(2),
-            torch.nn.Conv1d(64, 128, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(128),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(128, 128, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(128),
-            torch.nn.ReLU(),
-            torch.nn.MaxPool1d(2),
-            torch.nn.Conv1d(128, 256, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(256),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(256, 256, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(256),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(256, 256, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(256),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(256, 256, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(256),
-            torch.nn.ReLU(),
-            torch.nn.MaxPool1d(2),
-            torch.nn.Conv1d(256, 512, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(512),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(512, 512, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(512),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(512, 512, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(512),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(512, 512, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(512),
-            torch.nn.ReLU(),
-            torch.nn.MaxPool1d(2),
-            torch.nn.Conv1d(512, 512, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(512),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(512, 512, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(512),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(512, 512, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(512),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(512, 512, kernel_size=3, padding=1),
-            torch.nn.BatchNorm1d(512),
-            torch.nn.ReLU(),
-            torch.nn.MaxPool1d(2),
-            torch.nn.AdaptiveAvgPool1d(7),
+            nn.Conv1d(in_channels, 64, kernel_size=3, padding=1),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Conv1d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.MaxPool1d(2),  # /2 -> 32
+            nn.Conv1d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, padding=1),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.MaxPool1d(2),  # /2 -> 16
+            nn.Conv1d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Conv1d(256, 256, kernel_size=3, padding=1),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Conv1d(256, 256, kernel_size=3, padding=1),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Conv1d(256, 256, kernel_size=3, padding=1),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.MaxPool1d(2),  # /2 -> 8
+            nn.Conv1d(256, 512, kernel_size=3, padding=1),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Conv1d(512, 512, kernel_size=3, padding=1),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Conv1d(512, 512, kernel_size=3, padding=1),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Conv1d(512, 512, kernel_size=3, padding=1),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            # removed last MaxPool1d to prevent collapse
+            nn.AdaptiveAvgPool1d(1),
         )
-        self.classifer = torch.nn.Sequential(
-            torch.nn.Linear(3584, 1024),
-            torch.nn.ReLU(),
-            torch.nn.Dropout(0.5),
-            torch.nn.Linear(1024, 1024),
-            torch.nn.ReLU(),
-            torch.nn.Dropout(0.5),
-            torch.nn.Linear(1024, 512),
-            torch.nn.ReLU(),
-            torch.nn.Linear(512, classes),
+        self.classifer = nn.Sequential(
+            nn.Linear(512 * 1, 512),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(512, 128),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(128, classes),
         )
 
     def forward(self, x):
         x = self.feature(x)
-        x = x.view(-1, 3584)
-        x = self.classifer(x)
-        return x
+        x = torch.flatten(x, start_dim=1)
+        return self.classifer(x)
 
 
 class HistoAdapter(nn.Module):
@@ -406,6 +390,7 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
         # self.act = nn.Sigmoid() #
         # self.output_range = nn.Parameter(torch.FloatTensor([6]), requires_grad=False) #
         # self.output_shift = nn.Parameter(torch.FloatTensor([-3]), requires_grad=False) #
+        self.gamma = nn.Parameter(torch.randn(1), requires_grad=True)
 
     def forward(
         self, rad_feature, histo_feature, modality_flag=None, output_layers=["hazard"]

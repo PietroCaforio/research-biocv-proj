@@ -902,7 +902,6 @@ class SurvivalTrainerGCSController(BaseTrainer):
                     "adapted_histo",
                 ],
             )
-
             # Compute loss
             loss = self.criterion(
                 outputs["hazard"], batch_data["survtimes"], batch_data["censors"]
