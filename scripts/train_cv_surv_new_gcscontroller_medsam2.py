@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 
 sys.path.insert(0, "./")  # noqa: E402
 from data.multimodal_features_surv import MultimodalCTWSIDatasetSurv  # noqa: E402
-from models.dpe.main_model_nobackbone_surv_new_gcs_medsam2 import madpe_nobackbone  # noqa: E402
+from models.dpe.main_model_nobackbone_surv_new_gcs_medsam2_pooling import madpe_nobackbone  # noqa: E402
 from training.trainer_from_features_survival import (
     SurvivalTrainerGCSController as SurvivalTrainer,
 )  # noqa: E402
@@ -83,7 +83,7 @@ def main():
     experiment_dir.mkdir(parents=True, exist_ok=True)
     results = {"fold_results": [], "mean_metrics": {}, "std_metrics": {}}
 
-    for fold in range(5):
+    for fold in range(4):
         print(f"Running Cross-Validation - Fold {fold}")
 
         fold_dir = experiment_dir / f"fold_{fold}"

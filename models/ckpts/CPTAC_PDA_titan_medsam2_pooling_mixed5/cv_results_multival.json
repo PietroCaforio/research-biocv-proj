@@ -1,0 +1,119 @@
+{
+    "fold_results": [
+        {
+            "fold": 0,
+            "num_train_samples": 74,
+            "best_monitor_values": {
+                "ct_missing": 1.0,
+                "histo_missing": 0.699999988079071,
+                "mixed_missing": 0.7562050104141236
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.13732653856277466,
+                    "val_cindex": 1.0
+                },
+                "histo_missing": {
+                    "val_loss": 0.13732653856277466,
+                    "val_cindex": 0.699999988079071
+                },
+                "mixed_missing": {
+                    "val_loss": 0.1373174746831258,
+                    "val_cindex": 0.7562050104141236
+                }
+            }
+        },
+        {
+            "fold": 1,
+            "num_train_samples": 69,
+            "best_monitor_values": {
+                "ct_missing": 0.635605243841807,
+                "histo_missing": 0.6397003531455994,
+                "mixed_missing": 0.646915598710378
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.29781366984049473,
+                    "val_cindex": 0.635605243841807
+                },
+                "histo_missing": {
+                    "val_loss": 0.2448362032572428,
+                    "val_cindex": 0.6397003531455994
+                },
+                "mixed_missing": {
+                    "val_loss": 0.24188382360670302,
+                    "val_cindex": 0.646915598710378
+                }
+            }
+        },
+        {
+            "fold": 2,
+            "num_train_samples": 63,
+            "best_monitor_values": {
+                "ct_missing": 0.6383200645446777,
+                "histo_missing": 0.6167869965235392,
+                "mixed_missing": 0.6013672232627869
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.3682560053136613,
+                    "val_cindex": 0.6383200645446777
+                },
+                "histo_missing": {
+                    "val_loss": 0.37354965772893695,
+                    "val_cindex": 0.6167869965235392
+                },
+                "mixed_missing": {
+                    "val_loss": 0.3742937054899004,
+                    "val_cindex": 0.6013672232627869
+                }
+            }
+        },
+        {
+            "fold": 3,
+            "num_train_samples": 66,
+            "best_monitor_values": {
+                "ct_missing": 0.6207154075304667,
+                "histo_missing": 0.6254966855049133,
+                "mixed_missing": 0.6278204878171285
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.059327652719285744,
+                    "val_cindex": 0.6207154075304667
+                },
+                "histo_missing": {
+                    "val_loss": 0.058751279115676895,
+                    "val_cindex": 0.6254966855049133
+                },
+                "mixed_missing": {
+                    "val_loss": 0.060799743731816604,
+                    "val_cindex": 0.6278204878171285
+                }
+            }
+        },
+        {
+            "fold": 4,
+            "num_train_samples": 76,
+            "best_monitor_values": {
+                "ct_missing": 0.7678787668546041,
+                "histo_missing": 0.7715151349703471,
+                "mixed_missing": 0.7751514991124471
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.0,
+                    "val_cindex": 0.7678787668546041
+                },
+                "histo_missing": {
+                    "val_loss": 0.0,
+                    "val_cindex": 0.7715151349703471
+                },
+                "mixed_missing": {
+                    "val_loss": 0.0,
+                    "val_cindex": 0.7751514991124471
+                }
+            }
+        }
+    ]
+}

@@ -1,0 +1,51 @@
+{
+    "wandb": {
+        "project_name": "bestmodels_features",
+        "name": "CPTACPDA_nobackbone"
+    },
+    "data_training": {
+        "ct_path": "../../pooled_medsam2_UCEC",
+        "wsi_path": "../../slide_features_UCEC_prism/slide_features_prism/",
+        "labels_splits_path": "./data/processed/processed_CPTACUCEC_survival/k=all.tsv",
+        "missing_modality_prob":0.15,
+        "require_both_modalities":true,
+        "pairing_mode":"one_to_one",
+        "allow_repeats":true,
+        "pairs_per_patient":null,
+        "missing_modality":"both"
+    },
+    "data_loader": {
+        "num_workers": 2
+    },
+    "model": {
+        "checkpoint_path": "./models/ckpts/",
+        "rad_input_dim": 1024,
+        "histo_input_dim": 1280,
+        "inter_dim":256,
+        "token_dim":256,
+        "dim_hider":256
+    },
+    "training": {
+        "num_epochs": 800,
+        "batch_size": 16,
+        "learning_rate": 5e-3,
+        "pretrained_rad_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
+        "pretrained_histo_path":"./models/pretrain_weights/r3d34_K_200ep.pth",
+        "checkpoint_dir": "./models/ckpts/",
+        "log_interval": 1,
+        "scheduler": {
+            "type": "cosine_annealing_lr",
+            "T_max": 15,
+            "eta_min": 9e-5,
+            "last_epoch": -1
+        },
+        "early_stopping": {
+            "patience":1000,
+            "min_delta":1e-6,
+            "mode": "max"
+	    },
+        "monitor_metric": "val_cindex",
+        "gpu":1,
+        "n_validations": 15
+    }
+}

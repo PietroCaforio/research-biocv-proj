@@ -1,0 +1,8 @@
+{
+    "split": "ct_missing",
+    "best_monitor_metric": 0.757733146349589,
+    "best_metrics": {
+        "val_loss": 0.2800060311953227,
+        "val_cindex": 0.757733146349589
+    }
+}

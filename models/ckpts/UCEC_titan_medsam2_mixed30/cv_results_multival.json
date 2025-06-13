@@ -1,0 +1,96 @@
+{
+    "fold_results": [
+        {
+            "fold": 0,
+            "num_train_samples": 61,
+            "best_monitor_values": {
+                "ct_missing": 0.6688541134198507,
+                "histo_missing": 0.7580893715222676,
+                "mixed_missing": 0.6870541572570801
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.9518887793024381,
+                    "val_cindex": 0.6688541134198507
+                },
+                "histo_missing": {
+                    "val_loss": 0.2206974157442649,
+                    "val_cindex": 0.7580893715222676
+                },
+                "mixed_missing": {
+                    "val_loss": 1.13162902005974,
+                    "val_cindex": 0.6870541572570801
+                }
+            }
+        },
+        {
+            "fold": 1,
+            "num_train_samples": 65,
+            "best_monitor_values": {
+                "ct_missing": 0.8087113618850708,
+                "histo_missing": 0.8491756121317545,
+                "mixed_missing": 0.7794513901074728
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.15762787411610285,
+                    "val_cindex": 0.8087113618850708
+                },
+                "histo_missing": {
+                    "val_loss": 0.1624606728553772,
+                    "val_cindex": 0.8491756121317545
+                },
+                "mixed_missing": {
+                    "val_loss": 0.16919382413228354,
+                    "val_cindex": 0.7794513901074728
+                }
+            }
+        },
+        {
+            "fold": 2,
+            "num_train_samples": 59,
+            "best_monitor_values": {
+                "ct_missing": 0.7166990836461385,
+                "histo_missing": 0.7651647885640462,
+                "mixed_missing": 0.7111793955167135
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.09505043973525365,
+                    "val_cindex": 0.7166990836461385
+                },
+                "histo_missing": {
+                    "val_loss": 0.07399861216545105,
+                    "val_cindex": 0.7651647885640462
+                },
+                "mixed_missing": {
+                    "val_loss": 0.09170630623896917,
+                    "val_cindex": 0.7111793955167135
+                }
+            }
+        },
+        {
+            "fold": 3,
+            "num_train_samples": 64,
+            "best_monitor_values": {
+                "ct_missing": 0.8142217516899108,
+                "histo_missing": 0.9050738175710042,
+                "mixed_missing": 0.8153445482254028
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.2862366884946823,
+                    "val_cindex": 0.8142217516899108
+                },
+                "histo_missing": {
+                    "val_loss": 0.2569468488295873,
+                    "val_cindex": 0.9050738175710042
+                },
+                "mixed_missing": {
+                    "val_loss": 0.2916348844766617,
+                    "val_cindex": 0.8153445482254028
+                }
+            }
+        }
+    ]
+}

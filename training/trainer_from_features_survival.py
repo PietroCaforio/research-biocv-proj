@@ -2459,3 +2459,245 @@ class SurvivalTrainerMultival(SurvivalTrainerGCSController):
                 for i in range(len(self.val_loaders))
             },
         }
+        
+        
+class SurvivalTrainerMultivalNoGrad(SurvivalTrainer):
+    """
+    Trainer that supports multiple validation loaders. After each epoch, it runs validation
+    on every loader, tracks a separate "best" model for each, and saves checkpoints/metrics
+    per split.
+    """
+
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        train_loader: DataLoader,
+        val_loaders: List[DataLoader],
+        criterion: torch.nn.Module,
+        optimizer: torch.optim.Optimizer,
+        config: Dict,
+        device: torch.device,
+        experiment_name: str,
+        scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
+        early_stopping: Optional[Dict] = None,
+        n_validations: Optional[int] = None,
+        val_loader_names: Optional[List[str]] = None,
+    ):
+        # Call parent with only the first validation loader (to set up logging, wandb, checkpoints, etc.)
+        super().__init__(
+            model=model,
+            train_loader=train_loader,
+            val_loader=val_loaders[0],
+            criterion=criterion,
+            optimizer=optimizer,
+            config=config,
+            device=device,
+            experiment_name=experiment_name,
+            scheduler=scheduler,
+            early_stopping=early_stopping,
+            n_validations=n_validations,
+        )
+
+        # Override the single val_loader with the full list
+        self.val_loaders = val_loaders
+
+        # Assign or generate names for each validation split
+        if val_loader_names is None:
+            self.val_loader_names = [f"val_{i}" for i in range(len(val_loaders))]
+        else:
+            if len(val_loader_names) != len(val_loaders):
+                raise ValueError("val_loader_names must match the length of val_loaders.")
+            self.val_loader_names = val_loader_names
+
+        # Determine which metric to monitor and whether lower or higher is better
+        self.monitor_metric = config["training"]["monitor_metric"]
+        if "monitor_mode" in config["training"]:
+            self.monitor_mode = config["training"]["monitor_mode"]
+        else:
+            # By convention, assume "loss" metrics are to be minimized, others maximized
+            self.monitor_mode = "min" if "loss" in self.monitor_metric else "max"
+
+        # Initialize per-split best values and metric-storage
+        self.best_monitor_values: List[float] = []
+        self.best_metrics_per_loader: List[Dict[str, float]] = []
+        for _ in self.val_loaders:
+            if self.monitor_mode == "min":
+                self.best_monitor_values.append(float("inf"))
+            else:
+                self.best_monitor_values.append(float("-inf"))
+            self.best_metrics_per_loader.append({})
+
+    def validate_loader(self, loader: DataLoader) -> Dict[str, float]:
+        """
+        Run validation on a single DataLoader. Return a dict of metrics,
+        e.g. {"val_loss": ..., "val_cindex": ..., ...}.
+        """
+        self.model.eval()
+        metrics = defaultdict(float)
+        num_batches = len(loader)
+
+        total_outputs = torch.tensor([], dtype=torch.float32, device=self.device)
+        total_survtimes = torch.tensor([], dtype=torch.long, device=self.device)
+        total_censors = torch.tensor([], dtype=torch.long, device=self.device)
+
+        with torch.no_grad():
+            for batch in loader:
+                batch_data = self.process_batch(batch)
+                # Forward pass: get hazard predictions
+                outputs = self.model(
+                    batch_data["ct_feat"],
+                    batch_data["wsi_feat"],
+                    modality_flag=batch_data["modality_mask"],
+                )["hazard"]
+
+                # Compute loss
+                loss = self.criterion(
+                    outputs, batch_data["survtimes"], batch_data["censors"]
+                )
+                metrics["val_loss"] += loss.item()
+
+                total_outputs = torch.cat((total_outputs, outputs), dim=0)
+                total_survtimes = torch.cat((total_survtimes, batch_data["survtimes"]), dim=0)
+                total_censors = torch.cat((total_censors, batch_data["censors"]), dim=0)
+
+            # Compute any additional metrics (e.g., c-index) once per loader
+            for metric_name, metric_fn in self.metric_functions.items():
+                result_dict = metric_fn(total_outputs, total_survtimes, 1 - total_censors)
+                for k, v in result_dict.items():
+                    metrics[f"val_{k}"] = v
+
+        # Average the accumulated loss over all batches
+        metrics["val_loss"] /= num_batches
+        return dict(metrics)
+
+    def _save_split_checkpoint(self, loader_idx: int):
+        """
+        Save a checkpoint of the current model state for the split at index loader_idx.
+        Filename: {checkpoint_dir}/{experiment_name}_best_{loader_name}.pth
+        """
+        loader_name = self.val_loader_names[loader_idx]
+        ckpt = {
+            "epoch": self.current_epoch,
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "scheduler_state_dict": self.scheduler.state_dict() if self.scheduler else None,
+            "best_metrics": self.best_metrics_per_loader[loader_idx],
+            "config": self.config,
+            "timestamp": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+        }
+        filepath = self.checkpoint_dir / f"{self.experiment_name}_best_{loader_name}.pth"
+        torch.save(ckpt, filepath)
+        self.logger.info(f"Saved new best checkpoint for split '{loader_name}' to {filepath}")
+
+    def train(self):
+        """
+        Main training loop: for each epoch, run one train_epoch, then validate on all splits.
+        Save separate best-model checkpoints for each split whenever its monitor metric improves.
+        At the end, write a JSON file per split with that split’s best metrics.
+        """
+        # Loop over epochs
+        num_epochs = self.config["training"]["num_epochs"]
+        for epoch in range(self.current_epoch, num_epochs):
+            self.current_epoch = epoch
+
+            # ======== TRAINING PHASE ========
+            train_metrics = self.train_epoch()
+            if train_metrics is None:
+                self.logger.info("Detected NaN values during training. Stopping early.")
+                break
+
+            # ======== VALIDATION PHASE ========
+            all_val_metrics: List[Dict[str, float]] = []
+            for idx, loader in enumerate(self.val_loaders):
+                # Perform validation n_validations times if requested, otherwise just once
+                if self.n_validations is None:
+                    metrics_i = self.validate_loader(loader)
+                else:
+                    # Collect multiple runs
+                    metrics_list = []
+                    for _ in range(self.n_validations):
+                        metrics_list.append(self.validate_loader(loader))
+                    # Average each metric across the n_validations runs
+                    averaged = {}
+                    for key in metrics_list[0].keys():
+                        averaged[key] = sum(d[key] for d in metrics_list) / len(metrics_list)
+                    metrics_i = averaged
+
+                all_val_metrics.append(metrics_i)
+
+                
+                # Check if this split’s monitor metric improved
+                mon_val = metrics_i.get(self.monitor_metric)
+                if mon_val is None:
+                    raise KeyError(
+                        f"Monitor metric '{self.monitor_metric}' not found in validation metrics for split '{self.val_loader_names[idx]}'."
+                    )
+
+                best_so_far = self.best_monitor_values[idx]
+                improved = (
+                    (self.monitor_mode == "min" and mon_val < best_so_far)
+                    or (self.monitor_mode == "max" and mon_val > best_so_far)
+                )
+                if improved:
+                    self.best_monitor_values[idx] = mon_val
+                    # Store the entire metrics dict for this split
+                    self.best_metrics_per_loader[idx] = metrics_i.copy()
+                    # Save a checkpoint for this split
+                    self._save_split_checkpoint(idx)
+
+            # ======== LOGGING TO WANDB ========
+            log_dict = {}
+            # Include all training metrics as-is
+            log_dict.update(train_metrics)
+            # Prefix each split’s validation metrics with its name
+            for idx, metrics_i in enumerate(all_val_metrics):
+                split_name = self.val_loader_names[idx]
+                for k, v in metrics_i.items():
+                    log_dict[f"{split_name}_{k}"] = v
+            
+            # Update learning rate scheduler based on split 0’s monitor metric
+            first_mon = all_val_metrics[0][self.monitor_metric]
+            self.update_scheduler(first_mon)
+
+            # Log to wandb
+            torch_lr = self.optimizer.param_groups[0]["lr"]
+            log_dict["learning_rate"] = torch_lr
+            # (WandB was already initialized in super().__init__)
+            import wandb
+            wandb.log(log_dict)
+
+            # Print a concise epoch summary
+            monitor_strs = []
+            for idx in range(len(self.val_loaders)):
+                name = self.val_loader_names[idx]
+                val_m = all_val_metrics[idx][self.monitor_metric]
+                monitor_strs.append(f"{name}_{self.monitor_metric}={val_m:.4f}")
+            self.logger.info(
+                f"Epoch {epoch+1}/{num_epochs} – "
+                f"train_loss={train_metrics.get('train_loss', float('nan')):.4f}, "
+                + ", ".join(monitor_strs)
+            )
+
+        # ======== AFTER ALL EPOCHS: SAVE BEST-METRICS JSON PER SPLIT ========
+        for idx, loader_name in enumerate(self.val_loader_names):
+            out_dict = {
+                "split": loader_name,
+                "best_monitor_metric": self.best_monitor_values[idx],
+                "best_metrics": self.best_metrics_per_loader[idx],
+            }
+            json_path = self.checkpoint_dir / f"{self.experiment_name}_{loader_name}_best_metrics.json"
+            with open(json_path, "w") as f:
+                json.dump(out_dict, f, indent=4)
+            self.logger.info(f"Wrote best-metrics JSON for '{loader_name}' → {json_path}")
+
+        # Return a summary so the caller can inspect best values/metrics
+        return {
+            "best_monitor_values": {
+                self.val_loader_names[i]: self.best_monitor_values[i]
+                for i in range(len(self.val_loaders))
+            },
+            "best_metrics_per_split": {
+                self.val_loader_names[i]: self.best_metrics_per_loader[i]
+                for i in range(len(self.val_loaders))
+            },
+        }

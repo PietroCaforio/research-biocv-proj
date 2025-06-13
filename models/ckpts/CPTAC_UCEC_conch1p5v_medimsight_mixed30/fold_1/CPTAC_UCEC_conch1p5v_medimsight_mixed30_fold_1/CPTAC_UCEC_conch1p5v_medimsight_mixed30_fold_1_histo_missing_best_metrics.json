@@ -1,0 +1,8 @@
+{
+    "split": "histo_missing",
+    "best_monitor_metric": 0.6379310488700867,
+    "best_metrics": {
+        "val_loss": 0.14986847341060638,
+        "val_cindex": 0.6379310488700867
+    }
+}

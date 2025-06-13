@@ -83,7 +83,7 @@ def main():
     experiment_dir.mkdir(parents=True, exist_ok=True)
     results = {"fold_results": [], "mean_metrics": {}, "std_metrics": {}}
 
-    for fold in range(5):
+    for fold in range(4):
         print(f"Running Cross-Validation - Fold {fold}")
 
         fold_dir = experiment_dir / f"fold_{fold}"

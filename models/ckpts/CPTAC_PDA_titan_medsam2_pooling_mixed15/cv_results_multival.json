@@ -1,0 +1,119 @@
+{
+    "fold_results": [
+        {
+            "fold": 0,
+            "num_train_samples": 74,
+            "best_monitor_values": {
+                "ct_missing": 0.6965965906778971,
+                "histo_missing": 0.6046153783798218,
+                "mixed_missing": 0.6794488867123921
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.09187698165575663,
+                    "val_cindex": 0.6965965906778971
+                },
+                "histo_missing": {
+                    "val_loss": 0.12953781286875407,
+                    "val_cindex": 0.6046153783798218
+                },
+                "mixed_missing": {
+                    "val_loss": 0.09952292740345,
+                    "val_cindex": 0.6794488867123921
+                }
+            }
+        },
+        {
+            "fold": 1,
+            "num_train_samples": 69,
+            "best_monitor_values": {
+                "ct_missing": 0.6367209871610006,
+                "histo_missing": 0.6386142174402872,
+                "mixed_missing": 0.6190682093302409
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.26871620780891836,
+                    "val_cindex": 0.6367209871610006
+                },
+                "histo_missing": {
+                    "val_loss": 0.23043421539995407,
+                    "val_cindex": 0.6386142174402872
+                },
+                "mixed_missing": {
+                    "val_loss": 0.23083742095364465,
+                    "val_cindex": 0.6190682093302409
+                }
+            }
+        },
+        {
+            "fold": 2,
+            "num_train_samples": 63,
+            "best_monitor_values": {
+                "ct_missing": 0.5774017612139384,
+                "histo_missing": 0.5529290397961935,
+                "mixed_missing": 0.5503924131393433
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.34986414180861575,
+                    "val_cindex": 0.5774017612139384
+                },
+                "histo_missing": {
+                    "val_loss": 0.5322529594103496,
+                    "val_cindex": 0.5529290397961935
+                },
+                "mixed_missing": {
+                    "val_loss": 0.8074068546295166,
+                    "val_cindex": 0.5503924131393433
+                }
+            }
+        },
+        {
+            "fold": 3,
+            "num_train_samples": 66,
+            "best_monitor_values": {
+                "ct_missing": 0.6221684773763021,
+                "histo_missing": 0.6194122632344564,
+                "mixed_missing": 0.5768623987833659
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.05776545074250962,
+                    "val_cindex": 0.6221684773763021
+                },
+                "histo_missing": {
+                    "val_loss": 0.05777281853887771,
+                    "val_cindex": 0.6194122632344564
+                },
+                "mixed_missing": {
+                    "val_loss": 0.05828485422664219,
+                    "val_cindex": 0.5768623987833659
+                }
+            }
+        },
+        {
+            "fold": 4,
+            "num_train_samples": 76,
+            "best_monitor_values": {
+                "ct_missing": 0.692727267742157,
+                "histo_missing": 0.7581818024317424,
+                "mixed_missing": 0.699999996026357
+            },
+            "best_metrics_per_split": {
+                "ct_missing": {
+                    "val_loss": 0.0,
+                    "val_cindex": 0.692727267742157
+                },
+                "histo_missing": {
+                    "val_loss": 0.0,
+                    "val_cindex": 0.7581818024317424
+                },
+                "mixed_missing": {
+                    "val_loss": 0.0,
+                    "val_cindex": 0.699999996026357
+                }
+            }
+        }
+    ]
+}

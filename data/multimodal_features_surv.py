@@ -318,7 +318,7 @@ class MultimodalCTWSIDatasetSurv(Dataset):
 
     def _get_empty_ct_feature(self):
         """Return empty CT feature of correct shape"""
-        return np.zeros((66, 256, 32, 32))
+        return np.zeros((131, 1024))
 
     def _get_empty_wsi_feature(self):
         """Return empty WSI feature of correct shape"""
@@ -428,12 +428,12 @@ def test_multimodal_dataset():
     dataset = MultimodalCTWSIDatasetSurv(
         fold=0,
         split="train",
-        ct_path="../../CPTAC_PDA_CT_ft_MedSAM2_latest_ckpt",
-        wsi_path="../../TitanCPTACPDA/20x_512px_0px_overlap/slide_features_titan",
-        labels_splits_path="./data/processed/processed_CPTAC_PDA_survival/k=all.tsv",
-        missing_modality_prob=0.3,  # 30% chance of each modality being missing
+        ct_path="../MedImageInsights/embeddings_cptacucec",
+        wsi_path="../../trident_processed_UCEC_chief/10x_256px_0px_overlap/slide_features_chief/",
+        labels_splits_path="./data/processed/processed_CPTACUCEC_survival/k=all.tsv",
+        missing_modality_prob=1.0,  # 30% chance of each modality being missing
         missing_modality="both",
-        require_both_modalities=True,
+        require_both_modalities=False,
         pairing_mode="one_to_one",
         allow_repeats=True,
         pairs_per_patient=None,

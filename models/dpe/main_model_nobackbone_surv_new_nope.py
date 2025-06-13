@@ -269,7 +269,7 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
         # self.act = nn.Sigmoid() #
         # self.output_range = nn.Parameter(torch.FloatTensor([6]), requires_grad=False) #
         # self.output_shift = nn.Parameter(torch.FloatTensor([-3]), requires_grad=False) #
-
+        self.gamma = nn.Parameter(torch.randn(1), requires_grad=True)
     def forward(
         self, rad_feature, histo_feature, modality_flag=None, output_layers=["hazard"]
     ):
