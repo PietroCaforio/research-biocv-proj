@@ -5,8 +5,8 @@
             "num_train_samples": 61,
             "num_test_samples": 22,
             "best_metrics": {
-                "val_cindex": -Infinity,
-                "val_loss": Infinity
+                "val_cindex": 0.6933701634407043,
+                "val_loss": 0.043351377050385054
             }
         },
         {
@@ -14,8 +14,8 @@
             "num_train_samples": 65,
             "num_test_samples": 18,
             "best_metrics": {
-                "val_cindex": -Infinity,
-                "val_loss": Infinity
+                "val_cindex": 0.7330827116966248,
+                "val_loss": 0.043321698904037476
             }
         },
         {
@@ -23,8 +23,8 @@
             "num_train_samples": 59,
             "num_test_samples": 24,
             "best_metrics": {
-                "val_cindex": -Infinity,
-                "val_loss": Infinity
+                "val_cindex": 0.811284065246582,
+                "val_loss": 0.04332394152879715
             }
         },
         {
@@ -32,17 +32,17 @@
             "num_train_samples": 64,
             "num_test_samples": 19,
             "best_metrics": {
-                "val_cindex": -Infinity,
-                "val_loss": Infinity
+                "val_cindex": 0.8802816867828369,
+                "val_loss": 0.08869099617004395
             }
         }
     ],
     "mean_metrics": {
-        "val_cindex": -Infinity,
-        "val_loss": Infinity
+        "val_cindex": 0.779504656791687,
+        "val_loss": 0.054672003413315906
     },
     "std_metrics": {
-        "val_cindex": NaN,
-        "val_loss": NaN
+        "val_cindex": 0.07200709775226959,
+        "val_loss": 0.019640878101676192
     }
 }

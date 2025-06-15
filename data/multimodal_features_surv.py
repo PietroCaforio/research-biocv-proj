@@ -318,7 +318,7 @@ class MultimodalCTWSIDatasetSurv(Dataset):
 
     def _get_empty_ct_feature(self):
         """Return empty CT feature of correct shape"""
-        return np.zeros((131, 1024))
+        return np.zeros((66, 1024))
 
     def _get_empty_wsi_feature(self):
         """Return empty WSI feature of correct shape"""

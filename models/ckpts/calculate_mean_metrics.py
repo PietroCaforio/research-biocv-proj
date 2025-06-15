@@ -1,7 +1,7 @@
 import json
 import numpy as np
 
-performance = json.load(open("./UCEC_prism_medsam2_mixed30/cv_results_multival.json","r"))
+performance = json.load(open("./UCEC_ablation_nheads8_mixed15/cv_results_multival.json","r"))
 
 
 ct_missing_values = np.array([performance["fold_results"][i]["best_monitor_values"]["ct_missing"] for i in range(4)]) 
