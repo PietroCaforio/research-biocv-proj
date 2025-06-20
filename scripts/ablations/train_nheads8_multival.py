@@ -17,11 +17,15 @@ sys.path.insert(0, "./")  # noqa: E402
 
 # Import the dataset and model as before
 from data.multimodal_features_surv import MultimodalCTWSIDatasetSurv  # noqa: E402
-from models.dpe.main_model_nobackbone_surv_new_gcs_nheads8 import madpe_nobackbone  # noqa: E402
+from models.dpe.main_model_nobackbone_surv_new_gcs_nheads8 import (
+    madpe_nobackbone,
+)  # noqa: E402
 from training.losses import CoxLoss
 
 # Import the new trainer
-from training.trainer_from_features_survival import SurvivalTrainerMultival  # noqa: E402
+from training.trainer_from_features_survival import (
+    SurvivalTrainerMultival,
+)  # noqa: E402
 
 
 SEED = 0
@@ -41,7 +45,9 @@ def set_global_seed(seed=SEED):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train multimodal model with multiple validation splits")
+    parser = argparse.ArgumentParser(
+        description="Train multimodal model with multiple validation splits"
+    )
     parser.add_argument("--config", type=str, required=True, help="Path to config file")
     parser.add_argument(
         "--experiment-name", type=str, required=True, help="Name of the experiment"
@@ -100,8 +106,8 @@ def main():
         test_ct = MultimodalCTWSIDatasetSurv(
             fold=fold,
             split="test",
-            ct_path = config["data_training"]["ct_path"],
-            wsi_path = config["data_training"]["wsi_path"],
+            ct_path=config["data_training"]["ct_path"],
+            wsi_path=config["data_training"]["wsi_path"],
             labels_splits_path=config["data_training"]["labels_splits_path"],
             missing_modality_prob=config["data_training"]["missing_modality_prob"],
             require_both_modalities=True,
@@ -113,8 +119,8 @@ def main():
         test_histo = MultimodalCTWSIDatasetSurv(
             fold=fold,
             split="test",
-            ct_path = config["data_training"]["ct_path"],
-            wsi_path = config["data_training"]["wsi_path"],
+            ct_path=config["data_training"]["ct_path"],
+            wsi_path=config["data_training"]["wsi_path"],
             labels_splits_path=config["data_training"]["labels_splits_path"],
             missing_modality_prob=config["data_training"]["missing_modality_prob"],
             require_both_modalities=True,
@@ -126,8 +132,8 @@ def main():
         test_mixed = MultimodalCTWSIDatasetSurv(
             fold=fold,
             split="test",
-            ct_path = config["data_training"]["ct_path"],
-            wsi_path = config["data_training"]["wsi_path"],
+            ct_path=config["data_training"]["ct_path"],
+            wsi_path=config["data_training"]["wsi_path"],
             labels_splits_path=config["data_training"]["labels_splits_path"],
             missing_modality_prob=config["data_training"]["missing_modality_prob"],
             require_both_modalities=True,
@@ -209,7 +215,9 @@ def main():
                 eta_min=config["training"]["scheduler"]["eta_min"],
                 last_epoch=config["training"]["scheduler"]["last_epoch"],
             )
-        elif config["training"]["scheduler"]["type"] == "cosine_annealing_warm_restarts":
+        elif (
+            config["training"]["scheduler"]["type"] == "cosine_annealing_warm_restarts"
+        ):
             scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
                 optimizer,
                 T_0=config["training"]["scheduler"]["T_0"],
@@ -225,7 +233,7 @@ def main():
         # -----------------------
         val_loader_names = [
             "ct_missing",
-            "histo_missing",            
+            "histo_missing",
             "mixed_missing",
         ]
 

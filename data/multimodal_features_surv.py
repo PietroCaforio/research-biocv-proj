@@ -21,7 +21,7 @@ from torchvision import transforms
 from tqdm import tqdm
 
 
-class MultimodalCTWSIDatasetSurv(Dataset):
+class   MultimodalCTWSIDatasetSurv(Dataset):
     """
     Dataset class for paired CT and WSI data, handling missing modalities
         at both dataset and sampling level

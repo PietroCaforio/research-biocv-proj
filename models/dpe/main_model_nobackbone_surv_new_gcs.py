@@ -224,14 +224,14 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
                 1,
                 self.inter_dim,
             ),
-            requires_grad=True
+            requires_grad=True,
         )
         self.missing_histo_token = nn.Parameter(
             torch.randn(
                 1,
                 self.inter_dim,
             ),
-            requires_grad=True
+            requires_grad=True,
         )
 
         self.missing_rad_token_fusion = nn.Parameter(
@@ -239,14 +239,14 @@ class MADPENetNoBackbonesSurv(nn.Module):  # ModalityAwareDPENet da decidere nom
                 1,
                 self.token_dim,
             ),
-            requires_grad=True
+            requires_grad=True,
         )
         self.missing_histo_token_fusion = nn.Parameter(
             torch.randn(
                 1,
                 self.token_dim,
             ),
-            requires_grad=True
+            requires_grad=True,
         )
 
         self.token_adapt_rad = nn.Sequential(
