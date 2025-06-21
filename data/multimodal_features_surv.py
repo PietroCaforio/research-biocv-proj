@@ -3,21 +3,21 @@
 # e il numero del fold (tra 0 e 4), e una stringa "train" o "test", in base al numero
 # del fold carica in memoria i sample (che saranno coppie di feature WSI e associata CT,
 # senza ripetere le WSI, ma ripetendo le CT se necessario)
-import concurrent.futures
+#import concurrent.futures
 import os
 import random
 from itertools import product
-from pathlib import Path
+#from pathlib import Path
 
-import cv2
+#import cv2
 import h5py
 import numpy as np
 import pandas as pd
 import torch
-import torchstain
+#import torchstain
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-from torchvision import transforms
+#from torchvision import transforms
 from tqdm import tqdm
 
 
