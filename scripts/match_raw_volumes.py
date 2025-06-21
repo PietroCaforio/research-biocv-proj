@@ -41,7 +41,7 @@ from util.data_util import (  # noqa: E402
 )
 
 TARGET_SHAPE = [224, 224, 224]
-FIX_DEPTH = 66
+FIX_DEPTH = 131
 # --- helper (add to top section) -----------------------------------------
 import re   # already imported above, kept for clarity
 
