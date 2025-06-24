@@ -151,7 +151,7 @@ class MADPENetNoBackbonesSurv(nn.Module):
         token_dim=64,
         dim_hider=256,
         num_classes=3,
-        n_patch = 131
+        n_patch = 66
     ):
         super().__init__()
         self.rad_input_dim = rad_input_dim
@@ -360,7 +360,7 @@ class MADPENetNoBackbonesSurv(nn.Module):
             _rad_conv = self.rad_adapter(_rad_seq)             # [b1, 512, 66]
             adapted_rad_seq = _rad_conv.permute(0, 2, 1)        # [b1, 66, 512]
         else:
-            adapted_rad_seq = torch.zeros((0, 131, self.inter_dim), device=rad_feature.device)
+            adapted_rad_seq = torch.zeros((0, 66, self.inter_dim), device=rad_feature.device)
 
         # ----------------------------
         # 2) Adapt HISTO features (only where histo_mask == True)
@@ -369,11 +369,11 @@ class MADPENetNoBackbonesSurv(nn.Module):
         if histo_mask.any():
             adapted_histo_seq = self.histo_adapter(histo_feature[histo_mask])  # [b2, 66, 512]
         else:
-            adapted_histo_seq = torch.zeros((0, 131, self.inter_dim), device=histo_feature.device)
+            adapted_histo_seq = torch.zeros((0, 66, self.inter_dim), device=histo_feature.device)
 
         # Prepare placeholders for the full batch: [B, 66, inter_dim]
-        f_adapted_rad = torch.empty(batch_size, 131, self.inter_dim, device=adapted_rad_seq.device)
-        f_adapted_histo = torch.empty(batch_size, 131, self.inter_dim, device=adapted_histo_seq.device)
+        f_adapted_rad = torch.empty(batch_size, 66, self.inter_dim, device=adapted_rad_seq.device)
+        f_adapted_histo = torch.empty(batch_size, 66, self.inter_dim, device=adapted_histo_seq.device)
 
         # Put adapted where modality is present
         if rad_mask.any():
@@ -385,10 +385,10 @@ class MADPENetNoBackbonesSurv(nn.Module):
         if (~rad_mask).any():
             n_miss = (~rad_mask).sum()
             # missing_rad_token is [1,1,512] → repeat to [n_miss,66,512]
-            f_adapted_rad[~rad_mask] = self.missing_rad_token.repeat(n_miss, 131, 1)
+            f_adapted_rad[~rad_mask] = self.missing_rad_token.repeat(n_miss, 66, 1)
         if (~histo_mask).any():
             n_miss = (~histo_mask).sum()
-            f_adapted_histo[~histo_mask] = self.missing_histo_token.repeat(n_miss, 131, 1)
+            f_adapted_histo[~histo_mask] = self.missing_histo_token.repeat(n_miss, 66, 1)
 
         # If user just wants adapted features, return them
         if self._add_output_and_check(

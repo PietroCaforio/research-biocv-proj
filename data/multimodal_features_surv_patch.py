@@ -41,7 +41,7 @@ class MultimodalCTWSIDatasetSurv(Dataset):
         pairing_mode: str = None,  # 'all_combinations, 'one_to_one', 'fixed_count'
         pairs_per_patient: int = None,  # For fixed_count_mode
         allow_repeats: bool = False,  # For fixed_count mode
-        n_patches: int = 131
+        n_patches: int = 66
     ):
         super().__init__()
         # assert split in ["train", "val", "overfit", "all"]
@@ -323,11 +323,11 @@ class MultimodalCTWSIDatasetSurv(Dataset):
 
     def _get_empty_ct_feature(self):
         """Return empty CT feature of correct shape"""
-        return np.zeros((131, 1024))
+        return np.zeros((66, 1024))
 
     def _get_empty_wsi_feature(self):
         """Return empty WSI feature of correct shape"""
-        return np.zeros((131, 768))
+        return np.zeros((66, 1536))
 
     def __getitem__(self, index):
         """
