@@ -3,7 +3,7 @@ import json
 import numpy as np
 
 performance = json.load(
-    open("./CPTACPDA_trainmixed50_multival_Titan_MedImSight_redone/cv_results_multival.json")
+    open("./CPTACPDA_mixed30_UNI2_MedImageInsight/cv_results_multival.json")
 )
 
 
