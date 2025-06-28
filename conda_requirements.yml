@@ -7,12 +7,14 @@ channels:
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=2_gnu
+  - _sysroot_linux-64_curr_repodata_hack=3=haa98f57_10
   - alsa-lib=1.2.12=h4ab18f5_0
   - aom=3.9.1=hac33072_0
   - asttokens=3.0.0=pyhd8ed1ab_1
   - atk-1.0=2.38.0=h04ea711_2
   - attr=2.5.1=h166bdaf_1
   - beautifulsoup4=4.12.3=py39h06a4308_0
+  - binutils_impl_linux-64=2.43=h4bf12b8_2
   - blas=1.0=openblas
   - blosc=1.21.6=hef167b5_0
   - brotli=1.1.0=hb9d3cd8_2
@@ -22,13 +24,14 @@ dependencies:
   - bzip2=1.0.8=h5eee18b_6
   - c-ares=1.34.4=hb9d3cd8_0
   - c-blosc2=2.15.1=hc57e6cf_0
-  - ca-certificates=2025.1.31=hbcca054_0
+  - ca-certificates=2025.2.25=h06a4308_0
   - cairo=1.18.0=hebfffa5_3
-  - certifi=2024.12.14=py39h06a4308_0
+  - certifi=2025.6.15=py39h06a4308_0
   - cffi=1.17.1=py39h1fdaa30_1
   - cfitsio=4.4.1=ha728647_2
   - charls=2.4.2=h59595ed_0
   - charset-normalizer=3.4.0=pyhd8ed1ab_1
+  - cmake=3.30.5=hf9cb763_0
   - comm=0.2.2=pyhd8ed1ab_1
   - contourpy=1.3.0=py39h74842e3_2
   - cycler=0.12.1=pyhd8ed1ab_1
@@ -51,10 +54,14 @@ dependencies:
   - fonttools=4.54.1=py39h9399b63_1
   - freetype=2.12.1=h267a509_2
   - fribidi=1.0.10=h7b6447c_0
+  - gcc=14.2.0=h96c4ede_2
+  - gcc_impl_linux-64=14.2.0=hdb7739f_2
   - gdk-pixbuf=2.42.12=hb9ae30d_0
   - gdown=5.2.0=pyhd8ed1ab_1
   - gettext=0.22.5=he02047a_3
   - gettext-tools=0.22.5=he02047a_3
+  - gfortran=14.2.0=h96c4ede_2
+  - gfortran_impl_linux-64=14.2.0=h0ee6e4a_2
   - ghostscript=10.04.0=h5888daf_0
   - giflib=5.2.2=h5eee18b_0
   - glib=2.82.2=h07242d1_1
@@ -87,6 +94,7 @@ dependencies:
   - jupyter_client=8.6.3=py39h06a4308_0
   - jupyter_core=5.7.2=py39h06a4308_0
   - jxrlib=1.1=h7b6447c_2
+  - kernel-headers_linux-64=3.10.0=h57e8cba_10
   - keyutils=1.6.1=h166bdaf_0
   - kiwisolver=1.4.7=py39h74842e3_0
   - krb5=1.21.3=h659f571_0
@@ -124,6 +132,7 @@ dependencies:
   - libffi=3.4.2=h6a678d5_6
   - libflac=1.4.3=h59595ed_0
   - libgcc=14.2.0=h77fa898_1
+  - libgcc-devel_linux-64=14.2.0=h9c4974d_102
   - libgcc-ng=14.2.0=h69a702a_1
   - libgcrypt=1.11.0=h4ab18f5_1
   - libgd=2.3.3=hd3e95f3_10
@@ -156,6 +165,7 @@ dependencies:
   - libpng=1.6.44=hadc24fc_0
   - libpq=16.4=h2d7952a_3
   - librsvg=2.58.4=hc0ffecb_0
+  - libsanitizer=14.2.0=hed042b8_2
   - libsndfile=1.2.2=hc60ed4a_1
   - libsodium=1.0.20=h4ab18f5_0
   - libsqlite=3.47.0=hadc24fc_1
@@ -165,6 +175,7 @@ dependencies:
   - libsystemd0=256.7=h2774228_1
   - libtiff=4.7.0=hc4654cb_2
   - libuuid=2.38.1=h0b41bf4_0
+  - libuv=1.50.0=hb9d3cd8_0
   - libvips=8.15.5=hae9fa92_0
   - libvorbis=1.3.7=h7b6447c_0
   - libwebp=1.4.0=h2c329e2_0
@@ -187,15 +198,15 @@ dependencies:
   - ncurses=6.5=h2d0b736_3
   - nest-asyncio=1.6.0=py39h06a4308_0
   - networkx=3.2.1=py39h06a4308_0
+  - ninja=1.12.1=h297d8ca_0
   - nspr=4.36=h5888daf_0
   - nss=3.106=hdf54f9c_0
   - numpy=1.24.2=py39h7360e5f_0
   - openjpeg=2.5.2=he7f1fd0_0
   - openslide=4.0.0=h58ba908_1
   - openslide-python=1.3.1=py39h4853b82_3
-  - openssl=3.4.0=h7b32b05_1
+  - openssl=3.4.1=h7b32b05_0
   - packaging=24.1=py39h06a4308_0
-  - pandas=2.0.0=py39h2ad29b5_0
   - pango=1.54.0=h4c5309f_1
   - parso=0.8.4=py39h06a4308_0
   - pcre2=10.44=hba22ea6_2
@@ -203,7 +214,6 @@ dependencies:
   - pexpect=4.9.0=pyhd8ed1ab_1
   - pickleshare=0.7.5=pyhd3eb1b0_1003
   - pillow=11.0.0=py39h538c539_0
-  - pip=23.0.1=py39h06a4308_0
   - pixman=0.43.2=h59595ed_0
   - pkg-config=0.29.2=h1bed415_8
   - pkgconfig=1.5.5=py39h06a4308_0
@@ -238,17 +248,18 @@ dependencies:
   - rav1e=0.6.6=he8a937b_2
   - readline=8.2=h5eee18b_0
   - requests=2.32.3=py39h06a4308_1
+  - rhash=1.4.5=hb9d3cd8_0
   - scikit-image=0.21.0=py39h3d6467e_0
   - scikit-learn=1.2.2=py39h6a678d5_1
   - scikit-optimize=0.9.0=pyhd8ed1ab_1
   - scipy=1.10.1=py39h32ae08f_1
-  - setuptools=75.1.0=py39h06a4308_0
   - sip=6.7.12=py39h6a678d5_1
   - six=1.16.0=pyhd3eb1b0_1
   - snappy=1.2.1=h6a678d5_0
   - soupsieve=2.5=py39h06a4308_0
   - stack_data=0.6.3=pyhd8ed1ab_1
   - svt-av1=2.3.0=h5888daf_0
+  - sysroot_linux-64=2.17=h57e8cba_10
   - threadpoolctl=3.5.0=py39h2f386ee_0
   - tifffile=2024.6.18=pyhd8ed1ab_0
   - tk=8.6.13=noxft_h4845f30_101
@@ -262,7 +273,6 @@ dependencies:
   - unicodedata2=15.1.0=py39h5eee18b_1
   - urllib3=2.2.3=py39h06a4308_0
   - wcwidth=0.2.13=pyhd8ed1ab_1
-  - wheel=0.44.0=py39h06a4308_0
   - x265=3.5=h924138e_3
   - xcb-util=0.4.1=hb711507_2
   - xcb-util-image=0.4.0=hb711507_2
@@ -296,25 +306,32 @@ dependencies:
       - annotated-types==0.7.0
       - apptools==5.3.0
       - attrs==24.2.0
+      - autograd==1.7.0
+      - autograd-gamma==0.5.0
       - bleach==6.2.0
       - cfgv==3.4.0
       - click==8.1.8
       - distlib==0.3.9
       - docker-pycreds==0.4.0
+      - einops==0.8.1
       - envisage==7.0.3
       - eval-type-backport==0.2.2
       - filelock==3.16.1
+      - formulaic==1.1.1
       - fsspec==2024.10.0
       - gitdb==4.0.12
       - gitpython==3.1.44
       - h5py==3.12.1
       - identify==2.6.2
+      - interface-meta==1.3.0
       - jinja2==3.1.4
       - jsonschema==3.2.0
       - kaggle==1.6.17
+      - lifelines==0.30.0
       - markupsafe==3.0.2
       - mayavi==4.8.2
       - mpmath==1.3.0
+      - narwhals==1.30.0
       - nodeenv==1.9.1
       - nvidia-cublas-cu12==12.4.5.8
       - nvidia-cuda-cupti-cu12==12.4.127
@@ -329,6 +346,9 @@ dependencies:
       - nvidia-nvjitlink-cu12==12.4.127
       - nvidia-nvtx-cu12==12.4.127
       - opencv-python==4.10.0.84
+      - pandas==2.2.3
+      - pip==25.0.1
+      - plotly==6.0.0
       - pre-commit==4.0.1
       - protobuf==5.29.3
       - pydantic==2.10.6
@@ -338,14 +358,17 @@ dependencies:
       - pyface==8.0.0
       - pyrsistent==0.20.0
       - python-slugify==8.0.4
+      - seaborn==0.13.2
       - sentry-sdk==2.20.0
       - setproctitle==1.3.4
+      - setuptools==75.8.2
       - simpleitk==2.4.0
       - smmap==5.0.2
       - staintools==2.1.2
       - sympy==1.13.1
       - text-unidecode==1.3
       - torch==2.5.1
+      - torchstain==1.4.1
       - torchvision==0.20.1
       - traits==6.4.3
       - traitsui==8.0.0
@@ -353,4 +376,6 @@ dependencies:
       - virtualenv==20.27.1
       - vtk==9.3.1
       - webencodings==0.5.1
-prefix: /home/users/pietro.caforio/anaconda3/envs/research_biocv_proj
+      - wheel==0.45.1
+      - wrapt==1.17.2
+prefix: /home/pietro.caforio/anaconda3/envs/research_biocv_proj
