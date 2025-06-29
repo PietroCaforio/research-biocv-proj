@@ -77,7 +77,7 @@ def main():
 
     results = {"fold_results": []}
 
-    for fold in range(4):
+    for fold in range(config["n_folds"]):
         print(f"Running Cross-Validation - Fold {fold}")
 
         # Create a directory for this fold and copy config

@@ -12,7 +12,9 @@
         "pairing_mode":"one_to_one",
         "allow_repeats":true,
         "pairs_per_patient":null,
-        "n_patches":131
+        "n_patches":131,
+        "rad_dim": 1024,
+        "histo_dim": 1536
     },
     "data_validation": {
         "ct_path": "../MedImageInsights/embeddings_cptacucec",
@@ -23,7 +25,9 @@
         "pairing_mode":"one_to_one",
         "allow_repeats":true,
         "pairs_per_patient":null,
-        "n_patches":131
+        "n_patches":131,
+        "rad_dim": 1024,
+        "histo_dim": 1536
     },
     "data_loader": {
         "num_workers": 8
@@ -59,5 +63,6 @@
         "monitor_metric": "val_cindex",
         "gpu":1,
         "n_validations": null
-    }
+    },
+    "n_folds":4
 }

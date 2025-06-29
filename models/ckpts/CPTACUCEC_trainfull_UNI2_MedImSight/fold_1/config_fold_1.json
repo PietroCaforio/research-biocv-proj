@@ -63,6 +63,5 @@
         "monitor_metric": "val_cindex",
         "gpu":1,
         "n_validations": null
-    },
-    "n_folds":4
+    }
 }
