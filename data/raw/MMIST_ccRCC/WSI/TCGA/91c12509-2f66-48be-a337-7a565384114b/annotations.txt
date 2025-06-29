@@ -1,0 +1,2 @@
+id	submitter_id	entity_type	entity_id	category	classification	created_datetime	status	notes
+25aca043-39cd-5cfe-9fa7-575e450ebd9f	11832	case	6ab00314-5228-43ba-9880-9d5177b64c61	Prior malignancy	Notification	2012-10-31T00:00:00	Approved	Prior malignancy prostate cancer. No systemic chemotherapy or radiation.

@@ -125,6 +125,7 @@ def main():
             histo_input_dim=config["model"]["histo_input_dim"],
             inter_dim=config["model"]["inter_dim"],
             token_dim=config["model"]["token_dim"],
+            n_patch=config["model"]["n_patch"]
         )
         model.to(device)
         # Initialize loss and optimizer

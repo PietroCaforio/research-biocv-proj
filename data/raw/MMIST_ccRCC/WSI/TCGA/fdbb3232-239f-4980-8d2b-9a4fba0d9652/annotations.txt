@@ -1,0 +1,2 @@
+id	submitter_id	entity_type	entity_id	category	classification	created_datetime	status	notes
+46545eed-5d61-5ae0-bfc6-22902ab68865	17682	slide	aa540a01-05c2-46ec-a54e-6af8ea740943	General	Observation	2013-09-27T00:00:00	Approved	Slide barcode TCGA-CJ-4897-01A-01-BS1 differs from parent portion barcode TCGA-CJ-4897-01A-03

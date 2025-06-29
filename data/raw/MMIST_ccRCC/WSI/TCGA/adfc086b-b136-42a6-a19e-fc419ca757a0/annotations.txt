@@ -1,0 +1,2 @@
+id	submitter_id	entity_type	entity_id	category	classification	created_datetime	status	notes
+faa39418-d019-5a07-837c-10c0347aba76	12098	case	0ff579a1-e295-408d-b194-febbca798e34	Synchronous malignancy	Notification	2012-11-10T00:00:00	Approved	Pt with synchronous R kidney cancer and pancreatic cancer.

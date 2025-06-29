@@ -1,0 +1,3 @@
+id	submitter_id	entity_type	entity_id	category	classification	created_datetime	status	notes
+f35ebcac-1bc6-5a16-9e4e-85f4d2883988	2915	case	82f069c4-7928-4b7b-8a42-114db7de0501	Item in special subset	Notification	2011-06-21T00:00:00	Approved	Subsequent to most TCGA analysis, TSS noted that the case may be Chromophobe Renal Cell Carcinoma.  Program Office determined this will be a Notification vs. a Redaction
+297c4086-f913-5aee-b906-e43a8dccea3d	20725	case	82f069c4-7928-4b7b-8a42-114db7de0501	Item may not meet study protocol	Observation	2014-06-16T00:00:00	Approved	Case possible Kidney Chromophobe

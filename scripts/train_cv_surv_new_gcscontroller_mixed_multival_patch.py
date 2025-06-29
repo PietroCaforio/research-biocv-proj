@@ -109,6 +109,9 @@ def main():
             allow_repeats=True,
             pairs_per_patient=None,
             missing_modality="ct",
+            n_patches=config["data_training"]["n_patches"],
+            rad_dim=config["data_training"]["rad_dim"],
+            histo_dim=config["data_training"]["histo_dim"]
         )
         test_histo = MultimodalCTWSIDatasetSurv(
             fold=fold,
@@ -122,6 +125,9 @@ def main():
             allow_repeats=True,
             pairs_per_patient=None,
             missing_modality="wsi",
+            n_patches=config["data_training"]["n_patches"],
+            rad_dim=config["data_training"]["rad_dim"],
+            histo_dim=config["data_training"]["histo_dim"]
         )
         test_mixed = MultimodalCTWSIDatasetSurv(
             fold=fold,
@@ -135,6 +141,9 @@ def main():
             allow_repeats=True,
             pairs_per_patient=None,
             missing_modality="both",
+            n_patches=config["data_training"]["n_patches"],
+            rad_dim=config["data_training"]["rad_dim"],
+            histo_dim=config["data_training"]["histo_dim"]
         )
 
         # -----------------------
@@ -182,6 +191,7 @@ def main():
             histo_input_dim=config["model"]["histo_input_dim"],
             inter_dim=config["model"]["inter_dim"],
             token_dim=config["model"]["token_dim"],
+            n_patch=config["model"]["n_patch"]
         )
         model.to(device)
 

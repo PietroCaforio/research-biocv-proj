@@ -1,0 +1,3 @@
+id	submitter_id	entity_type	entity_id	category	classification	created_datetime	status	notes
+e74acd30-866d-5e84-ade9-84fee38b5d0f	12099	case	936c217f-f10b-43cf-bb6d-0a74ebec9b13	Synchronous malignancy	Notification	2012-11-10T00:00:00	Approved	Prior malignancy R kidney cancer. Prior malignancy L KIRC. No systemic chemotherapy or radiation. Patient with synchronous pancreatic cancer.
+cb1d9d8b-ecd6-5c9f-8c24-d0e2fedf1534	11854	case	936c217f-f10b-43cf-bb6d-0a74ebec9b13	Prior malignancy	Notification	2012-10-31T00:00:00	Approved	Prior malignancy R kidney cancer. Prior malignancy L KIRC. No systemic chemotherapy or radiation. Patient with synchronous pancreatic cancer.

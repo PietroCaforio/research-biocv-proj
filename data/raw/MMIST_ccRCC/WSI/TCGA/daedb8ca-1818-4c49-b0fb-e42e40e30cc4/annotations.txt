@@ -1,0 +1,2 @@
+id	submitter_id	entity_type	entity_id	category	classification	created_datetime	status	notes
+94600989-585f-5696-9c52-455e7a89762f	12064	case	ec3b2a30-fcf6-45ef-bd9d-e6089a237c0f	Synchronous malignancy	Notification	2012-11-10T00:00:00	Approved	Pt with synchronous carcinoid tumor of the intestine.

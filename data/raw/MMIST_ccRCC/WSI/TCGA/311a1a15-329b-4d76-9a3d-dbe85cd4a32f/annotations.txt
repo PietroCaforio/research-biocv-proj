@@ -1,0 +1,2 @@
+id	submitter_id	entity_type	entity_id	category	classification	created_datetime	status	notes
+fbed9bda-22fc-59d3-a396-6d004d0feaef	1268	case	33cd8b05-2b9b-40dd-97a2-40d02e27ee90	Neoadjuvant therapy	Notification	2011-02-05T00:00:00	Approved	[intgen.org]: Subject Positive for Neo-Adjuvant Therapy

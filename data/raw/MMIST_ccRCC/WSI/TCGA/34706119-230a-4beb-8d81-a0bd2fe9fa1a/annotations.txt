@@ -1,0 +1,3 @@
+id	submitter_id	entity_type	entity_id	category	classification	created_datetime	status	notes
+433578fe-1ce1-546a-8071-f9303cfd5b92	12093	case	aba26e6b-f11c-4ae6-a0d6-85bdd2060e8f	Synchronous malignancy	Notification	2012-11-10T00:00:00	Approved	Prior malignancy L KIRC. No systemic chemotherapy or radiation. Patient with synchronous L kidney cancer.
+95d96bbb-f922-5e6c-8de9-3aac3eee2bbd	11850	case	aba26e6b-f11c-4ae6-a0d6-85bdd2060e8f	Prior malignancy	Notification	2012-10-31T00:00:00	Approved	Prior malignancy L KIRC. No systemic chemotherapy or radiation. Patient with synchronous L kidney cancer.

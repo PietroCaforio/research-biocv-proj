@@ -1,0 +1,3 @@
+id	submitter_id	entity_type	entity_id	category	classification	created_datetime	status	notes
+c619420d-fe05-56ea-b63b-7106a702366c	12047	case	9c8169e7-9193-41f5-878e-ed1af3b95422	History of unacceptable prior treatment related to a prior/other malignancy	Notification	2012-11-10T00:00:00	Approved	Prior malignancy  L lung adenocarcinoma treated with fludarabine and L lung bronchoalveolar cancer.  No systemic chemotherapy  or radiation.
+a59bce8b-2d7a-5771-8e23-843209145e27	1088	case	9c8169e7-9193-41f5-878e-ed1af3b95422	Prior malignancy	Notification	2010-12-19T00:00:00	Approved	[intgen.org]: Prior Malignancy

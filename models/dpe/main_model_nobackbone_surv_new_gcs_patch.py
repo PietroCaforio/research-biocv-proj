@@ -25,11 +25,11 @@ class DynamicPositionalEmbedding(nn.Module):
     def forward(self, f_rad, f_histo, rad_mask, histo_mask):
         """
         Now expects:
-          f_rad:   [B, 66, token_dim]
-          f_histo: [B, 66, token_dim]
+          f_rad:   [B, self.n_patch, token_dim]
+          f_histo: [B, self.n_patch, token_dim]
         """
         pred_pos, pred_neg = self._correlation(f_rad, f_histo)
-        # pred_pos, pred_neg are each [B, 66]
+        # pred_pos, pred_neg are each [B, self.n_patch]
 
         # Concatenate along “feature” dimension → [B, 132].
         class_layers = torch.cat([pred_pos, pred_neg], dim=1)
@@ -49,29 +49,29 @@ class DynamicPositionalEmbedding(nn.Module):
 
     def _correlation(self, f_rad, f_histo):
         """
-        f_rad:   [B, 66, token_dim]
-        f_histo: [B, 66, token_dim]
+        f_rad:   [B, self.n_patch, token_dim]
+        f_histo: [B, self.n_patch, token_dim]
         Returns:
-          pos_map: [B, 66]
-          neg_map: [B, 66]
+          pos_map: [B, self.n_patch]
+          neg_map: [B, self.n_patch]
         """
 
         # 1) L2‐normalize along the feature dimension (dim=2)
-        f_rad_norm   = F.normalize(f_rad,   p=2, dim=2)  # [B, 66, token_dim]
-        f_histo_norm = F.normalize(f_histo, p=2, dim=2)  # [B, 66, token_dim]
+        f_rad_norm   = F.normalize(f_rad,   p=2, dim=2)  # [B, self.n_patch, token_dim]
+        f_histo_norm = F.normalize(f_histo, p=2, dim=2)  # [B, self.n_patch, token_dim]
 
-        # 2) Compute full [B, 66, 66] similarity
+        # 2) Compute full [B, self.n_patch, self.n_patch] similarity
         #    sim[b, i, j] = dot( f_rad_norm[b,i,:], f_histo_norm[b,j,:] )
-        sim = torch.einsum("bnd,bmd->bnm", f_rad_norm, f_histo_norm)  # [B, 66, 66]
+        sim = torch.einsum("bnd,bmd->bnm", f_rad_norm, f_histo_norm)  # [B, self.n_patch, self.n_patch]
 
-        # 3) For each “i” in 66, take top‐k positives across dim=2, then mean
+        # 3) For each “i” in self.n_patch, take top‐k positives across dim=2, then mean
         pos_map = torch.mean(
-            torch.topk(sim,     self.topk_pos, dim=-1).values,  # [B, 66, topk_pos]
-            dim=-1                                              # → [B, 66]
+            torch.topk(sim,     self.topk_pos, dim=-1).values,  # [B, self.n_patch, topk_pos]
+            dim=-1                                              # → [B, self.n_patch]
         )
         neg_map = torch.mean(
-            torch.topk(-sim,    self.topk_neg, dim=-1).values,  # [B, 66, topk_neg]
-            dim=-1                                              # → [B, 66]
+            torch.topk(-sim,    self.topk_neg, dim=-1).values,  # [B, self.n_patch, topk_neg]
+            dim=-1                                              # → [B, self.n_patch]
         )
 
         return pos_map, neg_map
@@ -79,13 +79,13 @@ class DynamicPositionalEmbedding(nn.Module):
 
 class HistoAdapter(nn.Module):
     """
-    Now: accepts x of shape [batch, 66, input_dim],
-         outputs [batch, 66, inter_dim].
+    Now: accepts x of shape [batch, self.n_patch, input_dim],
+         outputs [batch, self.n_patch, inter_dim].
     """
 
     def __init__(self, input_dim, inter_dim):
         super().__init__()
-        # Project each of the 66 “slots” from input_dim → inter_dim
+        # Project each of the self.n_patch “slots” from input_dim → inter_dim
         self.fc_in = nn.Linear(input_dim, inter_dim)
 
         # Two residual blocks (operating on last dimension = inter_dim)
@@ -107,18 +107,18 @@ class HistoAdapter(nn.Module):
 
     def forward(self, x):
         """
-        x: [batch, 66, input_dim]
-        returns: [batch, 66, inter_dim]
+        x: [batch, self.n_patch, input_dim]
+        returns: [batch, self.n_patch, inter_dim]
         """
         # 1) project each slot
-        x = self.fc_in(x)  # [batch, 66, inter_dim]
+        x = self.fc_in(x)  # [batch, self.n_patch, inter_dim]
 
         # 2) residual blocks (still per slot)
-        x = x + self.block1(x)  # [batch, 66, inter_dim]
-        x = x + self.block2(x)  # [batch, 66, inter_dim]
+        x = x + self.block1(x)  # [batch, self.n_patch, inter_dim]
+        x = x + self.block2(x)  # [batch, self.n_patch, inter_dim]
 
         # 3) final norm
-        x = self.final_norm(x)  # [batch, 66, inter_dim]
+        x = self.final_norm(x)  # [batch, self.n_patch, inter_dim]
         return x
 # attention based feature fusion network
 class fusion_layer(nn.Module):
@@ -360,7 +360,7 @@ class MADPENetNoBackbonesSurv(nn.Module):
             _rad_conv = self.rad_adapter(_rad_seq)             # [b1, 512, 66]
             adapted_rad_seq = _rad_conv.permute(0, 2, 1)        # [b1, 66, 512]
         else:
-            adapted_rad_seq = torch.zeros((0, 66, self.inter_dim), device=rad_feature.device)
+            adapted_rad_seq = torch.zeros((0, self.n_patch, self.inter_dim), device=rad_feature.device)
 
         # ----------------------------
         # 2) Adapt HISTO features (only where histo_mask == True)
@@ -369,11 +369,11 @@ class MADPENetNoBackbonesSurv(nn.Module):
         if histo_mask.any():
             adapted_histo_seq = self.histo_adapter(histo_feature[histo_mask])  # [b2, 66, 512]
         else:
-            adapted_histo_seq = torch.zeros((0, 66, self.inter_dim), device=histo_feature.device)
+            adapted_histo_seq = torch.zeros((0, self.n_patch, self.inter_dim), device=histo_feature.device)
 
-        # Prepare placeholders for the full batch: [B, 66, inter_dim]
-        f_adapted_rad = torch.empty(batch_size, 66, self.inter_dim, device=adapted_rad_seq.device)
-        f_adapted_histo = torch.empty(batch_size, 66, self.inter_dim, device=adapted_histo_seq.device)
+        # Prepare placeholders for the full batch: [B, self.n_patch, inter_dim]
+        f_adapted_rad = torch.empty(batch_size, self.n_patch, self.inter_dim, device=adapted_rad_seq.device)
+        f_adapted_histo = torch.empty(batch_size, self.n_patch, self.inter_dim, device=adapted_histo_seq.device)
 
         # Put adapted where modality is present
         if rad_mask.any():
@@ -381,14 +381,14 @@ class MADPENetNoBackbonesSurv(nn.Module):
         if histo_mask.any():
             f_adapted_histo[histo_mask] = adapted_histo_seq
 
-        # Fill missing with a learned token repeated 66 times
+        # Fill missing with a learned token repeated self.n_patch times
         if (~rad_mask).any():
             n_miss = (~rad_mask).sum()
-            # missing_rad_token is [1,1,512] → repeat to [n_miss,66,512]
-            f_adapted_rad[~rad_mask] = self.missing_rad_token.repeat(n_miss, 66, 1)
+            # missing_rad_token is [1,1,512] → repeat to [n_miss,self.n_patch,512]
+            f_adapted_rad[~rad_mask] = self.missing_rad_token.repeat(n_miss, self.n_patch, 1)
         if (~histo_mask).any():
             n_miss = (~histo_mask).sum()
-            f_adapted_histo[~histo_mask] = self.missing_histo_token.repeat(n_miss, 66, 1)
+            f_adapted_histo[~histo_mask] = self.missing_histo_token.repeat(n_miss, self.n_patch, 1)
 
         # If user just wants adapted features, return them
         if self._add_output_and_check(
@@ -396,7 +396,7 @@ class MADPENetNoBackbonesSurv(nn.Module):
             torch.cat(
                 [f_adapted_rad.view(batch_size, -1), f_adapted_histo.view(batch_size, -1)],
                 dim=1,
-            ),  # [B, 66*512 * 2]
+            ),  # [B, self.n_patch*512 * 2]
             outputs,
             output_layers,
         ):
@@ -409,14 +409,14 @@ class MADPENetNoBackbonesSurv(nn.Module):
 
         # ----------------------------
         # 3) Compute Positional Embedding via DPE
-        #    We first map each of the 66 slots from inter_dim → token_dim
-        #    so that we end up with [B, 66, token_dim] for both rad & histo.
+        #    We first map each of the self.n_patch slots from inter_dim → token_dim
+        #    so that we end up with [B, self.n_patch, token_dim] for both rad & histo.
         # ----------------------------
-        f_rad_pe   = self.token_adapt_rad_pe(f_adapted_rad)    # [B, 66, token_dim]
-        f_histo_pe = self.token_adapt_histo_pe(f_adapted_histo)# [B, 66, token_dim]
+        f_rad_pe   = self.token_adapt_rad_pe(f_adapted_rad)    # [B, self.n_patch, token_dim]
+        f_histo_pe = self.token_adapt_histo_pe(f_adapted_histo)# [B, self.n_patch, token_dim]
         pe = self.dpe(
-            f_rad_pe,        # [B, 66, token_dim]
-            f_histo_pe,      # [B, 66, token_dim]
+            f_rad_pe,        # [B, self.n_patch, token_dim]
+            f_histo_pe,      # [B, self.n_patch, token_dim]
             rad_mask,
             histo_mask,
         )  # → [B, token_dim]
@@ -428,18 +428,18 @@ class MADPENetNoBackbonesSurv(nn.Module):
         # 4) Token‐level adaptation for fusion
         #
         #    RAD tokens: same as before (operates on raw rad_feature)
-        #    HISTO tokens: now we take [b2, 66, histo_input_dim] → [b2, token_dim]
+        #    HISTO tokens: now we take [b2, self.n_patch, histo_input_dim] → [b2, token_dim]
         # ----------------------------
         if rad_mask.any():
-            _rad_t = rad_feature[rad_mask].permute(0, 2, 1)    # [b1, 1024, 66]
+            _rad_t = rad_feature[rad_mask].permute(0, 2, 1)    # [b1, 1024, self.n_patch]
             rad_tokens_pre = self.token_adapt_rad(_rad_t)     # [b1, 64]
         else:
             rad_tokens_pre = torch.zeros((0, self.token_dim), device=rad_feature.device)
 
         if histo_mask.any():
-            # histo_feature[histo_mask]: [b2, 66, histo_input_dim]
-            # Permute so Conv1d sees [b2, histo_input_dim, 66]
-            _his_t = histo_feature[histo_mask].permute(0, 2, 1)  # [b2, 768, 66]
+            # histo_feature[histo_mask]: [b2, self.n_patch, histo_input_dim]
+            # Permute so Conv1d sees [b2, histo_input_dim, self.n_patch]
+            _his_t = histo_feature[histo_mask].permute(0, 2, 1)  # [b2, 768, self.n_patch]
             histo_tokens_pre = self.token_adapt_histo(_his_t)    # [b2, 64]
         else:
             histo_tokens_pre = torch.zeros((0, self.token_dim), device=histo_feature.device)
@@ -494,11 +494,13 @@ def madpe_nobackbone(
     histo_input_dim=768,
     inter_dim=512,
     token_dim=64,
+    n_patch=66
 ):
     model = MADPENetNoBackbonesSurv(
         rad_input_dim,
         histo_input_dim,
         inter_dim,
         token_dim,
+        n_patch=n_patch
     )
     return model

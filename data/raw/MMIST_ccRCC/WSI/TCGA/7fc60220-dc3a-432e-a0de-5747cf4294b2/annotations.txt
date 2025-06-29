@@ -1,0 +1,3 @@
+id	submitter_id	entity_type	entity_id	category	classification	created_datetime	status	notes
+b7c88f21-0add-5031-8003-66870e086655	2387	case	d30f460b-8e85-4eb4-83b8-0a5d8bf4d10d	Prior malignancy	Notification	2011-04-02T00:00:00	Approved	[intgen.org]: Prior Malignancy
+faaaaab7-2e2a-5662-ab02-57c0b451d1f7	12055	case	d30f460b-8e85-4eb4-83b8-0a5d8bf4d10d	History of unacceptable prior treatment related to a prior/other malignancy	Notification	2012-11-10T00:00:00	Approved	Prior malignancy  L lung cancer with brian mets treated with etoposide and cisplatin and locoregional radiation.
