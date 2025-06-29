@@ -253,6 +253,7 @@ def main(args):
     root_path = os.path.normpath(args.root_path)
     segmentation_root = os.path.normpath(args.segmentation_root)
     metadata = pd.read_csv(args.metadata)
+    
     annotations.columns = annotations.columns.to_series().apply(change_case)
     validation_patients = Path(args.validation_patients).read_text().splitlines()
 

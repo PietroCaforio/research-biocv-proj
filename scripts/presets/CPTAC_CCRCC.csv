@@ -1,0 +1,2 @@
+dataset,segmentations,segmentations_metadata,clinical_data_list,root_path,segmentation_root,metadata,validation_patients
+CPTAC_UCEC,../data/raw/MMIST_ccRCC/RAD/Metadata_Report_CPTAC-CCRCC.csv,../data/raw/MMIST_ccRCC/RAD/CPTAC_segmentations/metadata.csv,../data/metadata_annotations/clinical_annotations.tsv,../data/raw/MMIST_ccRCC/RAD/CPTAC_RAD_manifest/CPTAC-CCRCC,../data/raw/MMIST_ccRCC/RAD/CPTAC_segmentations/,../data/raw/MMIST_ccRCC/RAD/CPTAC_RAD_manifest/metadata.csv,../data/processed/processed_oversampling/val.txt

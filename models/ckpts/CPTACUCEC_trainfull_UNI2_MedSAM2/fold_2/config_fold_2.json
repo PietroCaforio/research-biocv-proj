@@ -1,10 +1,10 @@
 {
     "wandb": {
-        "project_name": "bestmodels_features",
+        "project_name": "multimodal_survprediction",
         "name": "CPTACPDA_nobackbone"
     },
     "data_training": {
-        "ct_path": "../MedImageInsights/embeddings_cptacucec",
+        "ct_path": "../../pooled_medsam2_UCEC",
         "wsi_path": "../../trident_processed_UCEC_univ2/20x_256px_0px_overlap/features_uni_v2/",
         "labels_splits_path": "./data/processed/processed_CPTACUCEC_survival/k=all.tsv",
         "missing_modality_prob":0.0,
@@ -17,7 +17,7 @@
         "histo_dim": 1536
     },
     "data_validation": {
-        "ct_path": "../MedImageInsights/embeddings_cptacucec",
+        "ct_path": "../../pooled_medsam2_UCEC",
         "wsi_path": "../../trident_processed_UCEC_univ2/20x_256px_0px_overlap/features_uni_v2/",
         "labels_splits_path": "./data/processed/processed_CPTACUCEC_survival/k=all.tsv",
         "missing_modality_prob":0.0,
@@ -30,7 +30,7 @@
         "histo_dim": 1536
     },
     "data_loader": {
-        "num_workers": 8
+        "num_workers": 2
     },
     "model": {
         "checkpoint_path": "./models/ckpts/",
@@ -64,5 +64,5 @@
         "gpu":1,
         "n_validations": null
     },
-    "n_folds":4
+    "n_folds": 4
 }
