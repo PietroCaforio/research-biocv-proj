@@ -1,5 +1,0 @@
-id	submitter_id	entity_type	entity_id	category	classification	created_datetime	status	notes
-b02b2a31-7c5a-5ff0-a2ea-6ab54b721a86	12062	case	942c0088-c9a0-428c-a879-e16f8c5bfdb8	Synchronous malignancy	Notification	2012-11-10T00:00:00	Approved	Pt with synchronous B-cell lymphoma treated with cyclophosphamide, Adriamycin, vincristine, prednisone, and Rituxin prior to procurment of TCGA tumor.
-59f7f353-2119-58f2-a340-34bc39c3d7ef	1272	case	942c0088-c9a0-428c-a879-e16f8c5bfdb8	Prior malignancy	Notification	2011-02-05T00:00:00	Approved	[intgen.org]: Prior Malignancy
-e0fcd5e3-02f0-52b4-b949-95ed4de324f6	831	case	942c0088-c9a0-428c-a879-e16f8c5bfdb8	Molecular analysis outside specification	Notification	2010-10-29T00:00:00	Approved	Molecular results off spec
-6d57211a-402b-52c9-b857-665164c63339	12063	case	942c0088-c9a0-428c-a879-e16f8c5bfdb8	History of unacceptable prior treatment related to a prior/other malignancy	Notification	2012-11-10T00:00:00	Approved	Pt with synchronous B-cell lymphoma treated with cyclophosphamide, Adriamycin, vincristine, prednisone, and Rituxin prior to procurment of TCGA tumor.
