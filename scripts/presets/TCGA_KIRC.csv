@@ -1,0 +1,2 @@
+dataset,segmentations,segmentations_metadata,clinical_data_list,root_path,segmentation_root,metadata,validation_patients
+TCGA_KIRC,../data/raw/MMIST_ccRCC/RAD/segmentations.csv,../data/raw/MMIST_ccRCC/RAD/metadata.csv,../data/metadata_annotations/clinical_annotations.tsv,../data/raw/MMIST_ccRCC/RAD/TCGA_RAD_manifest/TCGA-KIRC,../data/raw/MMIST_ccRCC/RAD/TCGA_segmentations/TCGA_KIRC/,../data/raw/MMIST_ccRCC/RAD/TCGA_RAD_manifest/metadata.csv,../data/processed/processed_oversampling/val.txt
