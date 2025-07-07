@@ -41,6 +41,9 @@ class   MultimodalCTWSIDatasetSurv(Dataset):
         pairing_mode: str = None,  # 'all_combinations, 'one_to_one', 'fixed_count'
         pairs_per_patient: int = None,  # For fixed_count_mode
         allow_repeats: bool = False,  # For fixed_count mode
+        n_patches: int = 112,
+        rad_dim: int = 1024,
+        histo_dim: int = 768
     ):
         super().__init__()
         # assert split in ["train", "val", "overfit", "all"]
@@ -56,6 +59,9 @@ class   MultimodalCTWSIDatasetSurv(Dataset):
         self.missing_modality_prob = missing_modality_prob
         self.require_both_modalities = require_both_modalities
         self.labels_splits_path = labels_splits_path
+        self.rad_dim = rad_dim
+        self.histo_dim = histo_dim
+        self.n_patches = n_patches
         self.pairing_mode = (
             pairing_mode  # 'all_combinations', 'one_to_one', or 'fixed_count'
         )
@@ -318,11 +324,11 @@ class   MultimodalCTWSIDatasetSurv(Dataset):
 
     def _get_empty_ct_feature(self):
         """Return empty CT feature of correct shape"""
-        return np.zeros((66, 1024))
+        return np.zeros((self.n_patches, self.rad_dim))
 
     def _get_empty_wsi_feature(self):
         """Return empty WSI feature of correct shape"""
-        return np.zeros((768,))
+        return np.zeros((self.histo_dim,))
 
     def __getitem__(self, index):
         """
