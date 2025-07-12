@@ -3,16 +3,19 @@
         "project_name": "bestmodels_features",
         "name": "CPTACPDA_nobackbone"
     },
+    "n_folds":5,
     "data_training": {
-        "ct_path": "../MedImageInsights/cropped_embeddings_mmist_ccrcc",
-        "wsi_path": "../../../users/pietro.caforio/titan_mmist_ccrcc",
+        "ct_path": "../../medsam_mmist_ccrcc_cropped",
+        "wsi_path": "../../PRISM_MMISTCCRCC",
         "labels_splits_path": "./data/processed/processed_MMIST_CCRCC/clinical_train_5fold.tsv",
-        "missing_modality_prob":0.30,
+        "missing_modality_prob":0.05,
         "require_both_modalities":true,
         "pairing_mode":"one_to_one",
         "allow_repeats":true,
         "pairs_per_patient":null,
-        "missing_modality":"both"
+        "missing_modality":"both",
+        "histo_dim":1280,
+        "rad_dim":1024
     },
     "data_loader": {
         "num_workers": 0
@@ -20,7 +23,7 @@
     "model": {
         "checkpoint_path": "./models/ckpts/",
         "rad_input_dim": 1024,
-        "histo_input_dim": 768,
+        "histo_input_dim": 1280,
         "inter_dim":256,
         "token_dim":256,
         "dim_hider":256
@@ -45,7 +48,7 @@
             "mode": "max"
 	    },
         "monitor_metric": "val_cindex",
-        "gpu":0,
+        "gpu":1,
         "n_validations": 15
     }
 }

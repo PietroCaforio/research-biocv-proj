@@ -81,7 +81,8 @@ def main():
 
     results = {"fold_results": []}
 
-    for fold in range(4):
+
+    for fold in range(config["n_folds"]):
         print(f"Running Cross-Validation - Fold {fold}")
 
         # Create a directory for this fold and copy config
@@ -101,45 +102,38 @@ def main():
             fold=fold, split="train", **config["data_training"]
         )
 
+        common_test_args = {
+            "ct_path": config["data_training"]["ct_path"],
+            "wsi_path": config["data_training"]["wsi_path"],
+            "labels_splits_path": config["data_training"]["labels_splits_path"],
+            "missing_modality_prob": config["data_training"]["missing_modality_prob"],
+            "require_both_modalities": True,
+            "pairing_mode": "one_to_one",
+            "allow_repeats": True,
+            "pairs_per_patient": None,
+            "rad_dim": config["data_training"]["rad_dim"],
+            "histo_dim": config["data_training"]["histo_dim"],
+        }
+
         test_ct = MultimodalCTWSIDatasetSurv(
             fold=fold,
             split="test",
-            ct_path=config["data_training"]["ct_path"],
-            wsi_path=config["data_training"]["wsi_path"],
-            labels_splits_path=config["data_training"]["labels_splits_path"],
-            missing_modality_prob=config["data_training"]["missing_modality_prob"],
-            require_both_modalities=True,
-            pairing_mode="one_to_one",
-            allow_repeats=True,
-            pairs_per_patient=None,
             missing_modality="ct",
+            **common_test_args,
         )
         test_histo = MultimodalCTWSIDatasetSurv(
             fold=fold,
             split="test",
-            ct_path=config["data_training"]["ct_path"],
-            wsi_path=config["data_training"]["wsi_path"],
-            labels_splits_path=config["data_training"]["labels_splits_path"],
-            missing_modality_prob=config["data_training"]["missing_modality_prob"],
-            require_both_modalities=True,
-            pairing_mode="one_to_one",
-            allow_repeats=True,
-            pairs_per_patient=None,
             missing_modality="wsi",
+            **common_test_args,
         )
         test_mixed = MultimodalCTWSIDatasetSurv(
             fold=fold,
             split="test",
-            ct_path=config["data_training"]["ct_path"],
-            wsi_path=config["data_training"]["wsi_path"],
-            labels_splits_path=config["data_training"]["labels_splits_path"],
-            missing_modality_prob=config["data_training"]["missing_modality_prob"],
-            require_both_modalities=True,
-            pairing_mode="one_to_one",
-            allow_repeats=True,
-            pairs_per_patient=None,
             missing_modality="both",
+            **common_test_args,
         )
+
 
         # -----------------------
         # Create dataloaders

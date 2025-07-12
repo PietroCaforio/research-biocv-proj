@@ -83,7 +83,7 @@ def main():
     experiment_dir.mkdir(parents=True, exist_ok=True)
     results = {"fold_results": [], "mean_metrics": {}, "std_metrics": {}}
 
-    for fold in range(4):
+    for fold in range(config["n_folds"]):
         print(f"Running Cross-Validation - Fold {fold}")
         fold_dir = experiment_dir / f"fold_{fold}"
         fold_dir.mkdir(parents=True, exist_ok=True)
@@ -96,8 +96,12 @@ def main():
             fold=fold, split="train", **config["data_training"]
         )
 
+        # Copy training config and remove 'n_patches' key if present for validation
+        validation_args = config["data_training"].copy()
+        validation_args.pop("n_patches", None)
+
         test_dataset = MultimodalCTWSIDatasetSurv(
-            fold=fold, split="test", **config["data_validation"]
+            fold=fold, split="test", **validation_args
         )
         # Create dataloaders
         train_loader = DataLoader(

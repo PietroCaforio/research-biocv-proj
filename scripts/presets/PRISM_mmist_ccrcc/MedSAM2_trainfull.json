@@ -3,33 +3,36 @@
         "project_name": "multimodal_survprediction",
         "name": "CPTACPDA_nobackbone"
     },
+    "n_folds":5,
     "data_training": {
-        "ct_path": "../../pooled_medsam2_PDA",
-        "wsi_path": "../../trident_processed_PDA_univ2/20x_256px_0px_overlap/features_uni_v2/",
-        "labels_splits_path": "./data/processed/processed_CPTAC_PDA_survival/k=all.tsv",
+        "ct_path": "../../medsam_mmist_ccrcc_cropped",
+        "wsi_path": "../../PRISM_MMISTCCRCC",
+        "labels_splits_path": "./data/processed/processed_MMIST_CCRCC/clinical_train_5fold.tsv",
         "missing_modality_prob":0.0,
         "require_both_modalities":true,
         "pairing_mode":"one_to_one",
         "allow_repeats":true,
-        "pairs_per_patient":null
+        "pairs_per_patient":null,
+        "histo_dim":1280
     },
     "data_validation": {
-        "ct_path": "../../pooled_medsam2_PDA",
-        "wsi_path": "../../trident_processed_PDA_univ2/20x_256px_0px_overlap/features_uni_v2/",
-        "labels_splits_path": "./data/processed/processed_CPTAC_PDA_survival/k=all.tsv",
+        "ct_path": "../../medsam_mmist_ccrcc_cropped",
+        "wsi_path": "../../PRISM_MMISTCCRCC",
+        "labels_splits_path": "./data/processed/processed_MMIST_CCRCC/clinical_train_5fold.tsv",
         "missing_modality_prob":0.0,
         "require_both_modalities":true,
         "pairing_mode":"one_to_one",
         "allow_repeats":true,
-        "pairs_per_patient":null
+        "pairs_per_patient":null,
+        "histo_dim":1280
     },
     "data_loader": {
-        "num_workers": 2
+        "num_workers": 0
     },
     "model": {
         "checkpoint_path": "./models/ckpts/",
         "rad_input_dim": 1024,
-        "histo_input_dim": 1536,
+        "histo_input_dim": 1280,
         "inter_dim":256,
         "token_dim":256,
         "dim_hider": 256
@@ -44,8 +47,8 @@
         "log_interval": 1,
         "scheduler": {
             "type": "cosine_annealing_lr",
-            "T_max": 15,
-            "eta_min": 9e-5,
+            "T_max": 80,
+            "eta_min": 9e-4,
             "last_epoch": -1
         },
         "early_stopping": {
